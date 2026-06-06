@@ -1,80 +1,154 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRX Miner</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body {background:#0f172a;color:white;font-family:Arial;text-align:center;padding:20px;margin:0;}
-    h1 {color:#22ff88;}
-    .balance {font-size:32px;color:#22ff88;margin:10px;}
-    .timer {font-size:45px;color:#00ffff;font-weight:bold;margin:15px;}
-    button {background:#22ff88;color:black;border:none;padding:15px;margin:10px;font-size:18px;border-radius:50px;width:80%;}
-    button:disabled {background:#555;color:#ccc;}
-  </style>
-</head>
-<body>
-  <h2>🔥 TRX MINER</h2>
-  <h1>Generador de TRX</h1>
-  <div style="font-size:100px;margin:20px;">💎</div>
-   <div class="balance" id="balance">0.000000 TRX</div>
-  <div class="timer" id="timer">06:00:00</div>
-  <p id="status">Cargando...</p>
-  <button id="claimBtn" onclick="claim()">💎 Reclamar TRX</button>
-  <button onclick="Telegram.WebApp.close()">Cerrar</button>
-
-  <script>
-    let balance = 0;
-    const CLAIM_TIME = 6*60*60*1000;
-    const CLAIM_AMOUNT = 0.5;
-
-    function loadData() {
-      balance = parseFloat(localStorage.getItem('balance')) || 0;
-      document.getElementById("balance").innerText = balance.toFixed(6) + " TRX";
-
-      const last = localStorage.getItem('lastClaim');
-      if (last) {
-        updateTimer(Number(last));
-      } else {
-        document.getElementById("claimBtn").disabled = false;
-        document.getElementById("status").innerText = "¡Listo para reclamar!";
-      }
-    }
-
-    function updateTimer(lastTime) {
-      setInterval(() => {
-        const remaining = CLAIM_TIME - (Date.now() - lastTime);
-        const timerEl = document.getElementById("timer");
-
-        if (remaining <= 0) {
-          timerEl.innerText = "06:00:00";
-          document.getElementById("status").innerText = "¡Listo para reclamar!";
-          document.getElementById("claimBtn").disabled = false;
-          return;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TRON Miner - Telegram Mini App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
+            color: white;
         }
+        
+        .tron-glow {
+            text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff;
+        }
+        
+        .mining-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .mining-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .balance {
+            font-size: 3rem;
+            font-weight: 700;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #00f0ff;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleAnim 1.5s forwards;
+        }
+        
+        @keyframes particleAnim {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0) translateY(-100px); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+    <div class="max-w-md mx-auto bg-black/80 min-h-screen">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-cyan-500 to-blue-600 p-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-2xl">₿</div>
+                <div>
+                    <h1 class="text-2xl font-bold tron-glow">TRON MINER</h1>
+                    <p class="text-xs text-cyan-100">TRX Mining Bot</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-xs opacity-75">Telegram Mini App</div>
+                <div class="flex items-center gap-1 text-xs">
+                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span>En línea</span>
+                </div>
+            </div>
+        </div>
 
-        const h = Math.floor(remaining / 3600000);
-        const m = Math.floor((remaining % 3600000) / 60000);
-        const s = Math.floor((remaining % 60000) / 1000);
+        <!-- Balance Dashboard -->
+        <div class="p-6">
+            <div class="bg-zinc-900 rounded-3xl p-8 text-center border border-cyan-500/30">
+                <p class="text-cyan-400 text-sm font-medium tracking-widest">TU BALANCE</p>
+                <div id="balance" class="balance text-white mt-2">0.000</div>
+                <div class="flex items-center justify-center gap-2 mt-1">
+                    <span class="text-3xl">₮</span>
+                    <span class="text-xl text-cyan-300 font-semibold">TRX</span>
+                </div>
+            </div>
 
-        timerEl.innerText = h.toString().padStart(2,'0') + ":" + m.toString().padStart(2,'0') + ":" + s.toString().padStart(2,'0');
-      }, 1000);
-    }
+            <!-- Mining Button -->
+            <div class="mt-8">
+                <button id="mineBtn"
+                        class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center shadow-2xl shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i id="mineIcon" class="fas fa-bolt text-4xl mb-3"></i>
+                    <span id="mineText">MINAR TRX</span>
+                    <span id="cooldownText" class="text-sm mt-2 opacity-75 hidden"></span>
+                </button>
+                <p class="text-center text-xs text-zinc-500 mt-4">Cada clic = <span class="text-emerald-400 font-bold">0.001 TRX</span></p>
+            </div>
 
-    function claim() {
-      balance += CLAIM_AMOUNT;
-      const now = Date.now();
-      localStorage.setItem('balance', balance);
-      localStorage.setItem('lastClaim', now);
+            <!-- Stats -->
+            <div class="grid grid-cols-2 gap-4 mt-8">
+                <div class="bg-zinc-900/70 rounded-2xl p-5">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-xs text-zinc-400">Minados hoy</p>
+                            <div id="todayMined" class="text-2xl font-bold text-emerald-400">0.000</div>
+                        </div>
+                        <i class="fas fa-chart-line text-3xl text-emerald-500"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-zinc-900/70 rounded-2xl p-5">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-xs text-zinc-400">Total minado</p>
+                            <div id="totalMined" class="text-2xl font-bold">0.000</div>
+                        </div>
+                        <i class="fas fa-coins text-3xl text-amber-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-      document.getElementById("balance").innerText = balance.toFixed(6) + " TRX";
-      Telegram.WebApp.showAlert("✅ Reclamaste " + CLAIM_AMOUNT + " TRX");
+        <!-- Withdraw Section -->
+        <div class="px-6 mt-6">
+            <div class="bg-zinc-900 rounded-3xl p-6 border border-amber-400/30">
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-wallet"></i>
+                    Retirar fondos
+                </h3>
+                <div class="mt-4">
+                    <input id="withdrawAddress" 
+                           type="text" 
+                           placeholder="Tu dirección TRON (TRC20)"
+                           class="w-full bg-black border border-zinc-700 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-cyan-400">
+                </div>
+                
+                <button id="withdrawBtn"
+                        class="mt-4 w-full bg-gradient-to-r from-amber-500 to-yellow-600 py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 hover:brightness-110">
+                    <i class="fas fa-arrow-up"></i>
+                    RETIRAR TODO
+                </button>
+                
+                <p class="text-center text-xs text-zinc-500 mt-4">Mínimo de retiro: 1 TRX</p>
+            </div>
+        </div>
 
-      updateTimer(now);
-    }
+        <!-- History -->
+        <div class="px-6 mt-8">
+            <h3 class="font-medium text-zinc-400 mb-3 flex items-center gap-2">
+                <i class="fas fa-history"></i>
+                HISTORIAL RECIENTE
+            </h3>
+            <div id="history" class="space-y-3">
+                <!-- JS populated -->
+            </div>
+        </div>
 
-    window.onload = loadData;
-  </script>
-</body>
-</html>
+        <!-- Footer -->
+        <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-950 border-t border-zinc-800 p-3 text-center text-xs text-zinc-500">
+            Sim
