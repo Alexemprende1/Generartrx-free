@@ -28,7 +28,10 @@
       width: 85%; 
     }
     button:disabled { background: #555; color: #aaa; }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes spin { 
+      from { transform: rotate(0deg); } 
+      to { transform: rotate(360deg); } 
+    }
   </style>
 </head>
 <body>
@@ -58,8 +61,8 @@
       if (lastClaim) {
         updateTimer(parseInt(lastClaim));
       } else {
-        document.getElementById("claimBtn").disabled = false;
         document.getElementById("status").innerText = "¡Listo para reclamar!";
+        document.getElementById("claimBtn").disabled = false;
       }
     }
 
@@ -68,7 +71,7 @@
       const statusEl = document.getElementById("status");
       const claimBtn = document.getElementById("claimBtn");
 
-      const interval = setInterval(() => {
+      setInterval(() => {
         const now = Date.now();
         const elapsed = now - lastClaimTime;
         const remaining = CLAIM_TIME - elapsed;
@@ -77,7 +80,6 @@
           timerEl.innerText = "06:00:00";
           statusEl.innerText = "¡Listo para reclamar!";
           claimBtn.disabled = false;
-          clearInterval(interval);
           return;
         }
 
@@ -85,5 +87,26 @@
         const minutes = Math.floor((remaining % (1000*60*60)) / (1000*60));
         const seconds = Math.floor((remaining % (1000*60)) / 1000);
 
-        timerEl.innerText = hours.toString().padStart(2,'0') + ":" + 
-                           minutes.toString().padStart(2,'0') +
+        timerEl.innerText = `\( {hours.toString().padStart(2,'0')}: \){minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+        statusEl.innerText = "El generador está funcionando...";
+        claimBtn.disabled = true;
+      }, 1000);
+    }
+
+    function claim() {
+      balance += 50;
+      const now = Date.now();
+
+      localStorage.setItem('balance', balance);
+      localStorage.setItem('lastClaim', now);
+
+      document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
+      Telegram.WebApp.showAlert("✅ ¡Reclamaste 50 DOGE! El contador se reinició.");
+
+      updateTimer(now);
+    }
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>
