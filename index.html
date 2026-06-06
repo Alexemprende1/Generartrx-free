@@ -36,4 +36,76 @@
   <h2>🔥 TRX MINER</h2>
   <h1>Generador de TRX</h1>
   
-  <div class
+  <div class="coin">💎</div>
+  
+  <h2 class="balance" id="balance">0.000000 TRX</h2>
+  <p class="rate" id="rate">Velocidad: 0.0000 TRX / minuto</p>
+  
+  <div class="timer" id="timer">06:00:00</div>
+  <p id="status">El minero está trabajando...</p>
+  
+  <button id="claimBtn" onclick="claim()">💎 Reclamar TRX</button>
+  <button onclick="Telegram.WebApp.close()">Cerrar</button>
+
+  <script>
+    let balance = 0;
+    const CLAIM_TIME = 6 * 60 * 60 * 1000; // 6 horas
+    const CLAIM_AMOUNT = 0.5; // Cantidad que se reclama cada 6 horas (cámbialo si quieres)
+
+    function loadData() {
+      balance = parseFloat(localStorage.getItem('trx_balance')) || 0;
+      document.getElementById("balance").innerText = balance.toFixed(6) + " TRX";
+
+      const lastClaim = localStorage.getItem('lastClaim');
+      if (lastClaim) {
+        updateTimer(parseInt(lastClaim));
+      } else {
+        document.getElementById("claimBtn").disabled = false;
+        document.getElementById("status").innerText = "¡Listo para reclamar!";
+      }
+    }
+
+    function updateTimer(lastClaimTime) {
+      const timerEl = document.getElementById("timer");
+      const statusEl = document.getElementById("status");
+      const claimBtn = document.getElementById("claimBtn");
+
+      setInterval(() => {
+        const now = Date.now();
+        const elapsed = now - lastClaimTime;
+        const remaining = CLAIM_TIME - elapsed;
+
+        if (remaining <= 0) {
+          timerEl.innerText = "06:00:00";
+          statusEl.innerText = "¡Listo para reclamar!";
+          claimBtn.disabled = false;
+          return;
+        }
+
+        const hours = Math.floor(remaining / (1000*60*60));
+        const minutes = Math.floor((remaining % (1000*60*60)) / (1000*60));
+        const seconds = Math.floor((remaining % (1000*60)) / 1000);
+
+        timerEl.innerText = `\( {hours.toString().padStart(2,'0')}: \){minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+        statusEl.innerText = "El minero está trabajando...";
+        claimBtn.disabled = true;
+      }, 1000);
+    }
+
+    function claim() {
+      balance += CLAIM_AMOUNT;
+      const now = Date.now();
+
+      localStorage.setItem('trx_balance', balance);
+      localStorage.setItem('lastClaim', now);
+
+      document.getElementById("balance").innerText = balance.toFixed(6) + " TRX";
+      Telegram.WebApp.showAlert(`✅ ¡Reclamaste ${CLAIM_AMOUNT} TRX!`);
+
+      updateTimer(now); // Reinicia el contador
+    }
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>
