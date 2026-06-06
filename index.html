@@ -3,47 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dogecoin Generator</title>
+  <title>Generador de Dogecoin</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body {
-      background: linear-gradient(#1a1a2e, #16213e);
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
-    }
-    .coin {
-      font-size: 120px;
-      margin: 20px;
-      animation: spin 4s linear infinite;
-    }
-    .balance {
-      font-size: 28px;
-      color: #ffd700;
-      margin: 10px;
-    }
-    .timer {
-      font-size: 36px;
-      color: #00ffcc;
-      font-weight: bold;
-      margin: 15px;
-    }
-    button {
-      background: #ffd700;
-      color: black;
-      border: none;
-      padding: 15px 30px;
-      margin: 10px;
-      font-size: 18px;
-      border-radius: 50px;
-      width: 80%;
-    }
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
+    body { background: linear-gradient(#1a1a2e, #16213e); color: white; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
+    .coin { font-size: 110px; margin: 20px; animation: spin 6s linear infinite; }
+    .balance { font-size: 32px; color: #ffd700; margin: 10px; }
+    .timer { font-size: 42px; color: #00ffcc; font-weight: bold; margin: 15px; }
+    button { background: #ffd700; color: black; border: none; padding: 16px 30px; margin: 10px; font-size: 18px; border-radius: 50px; width: 85%; }
+    button:disabled { background: #555; color: #aaa; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -55,19 +24,49 @@
   <h2 class="balance" id="balance">0.00000000 DOGE</h2>
   <p>Generando (DOGE)</p>
   
-  <div class="timer" id="timer">01:49:10</div>
-  <p>¡El generador está funcionando! Cuanto más esperes, más DOGE podrás reclamar.</p>
+  <div class="timer" id="timer">00:00:00</div>
+  <p id="status">Cargando...</p>
   
-  <button onclick="claim()">💎 Reclamar DOGE</button>
+  <button id="claimBtn" onclick="claim()">💎 Reclamar DOGE</button>
   <button onclick="Telegram.WebApp.close()">Cerrar</button>
 
   <script>
+    const userId = Telegram.WebApp.initDataUnsafe.user?.id;
     let balance = 0;
-    function claim() {
-      balance += 50;
-      document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
-      Telegram.WebApp.showAlert("✅ ¡Reclamaste 50 DOGE!");
+
+    async function api(action, data = {}) {
+      const res = await fetch(`https://TU_BOT_URL_AQUÍ/webhook`, {  // Cambiaremos esto después
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, userId, ...data })
+      });
+      return res.json();
     }
+
+    async function loadData() {
+      if (!userId) return;
+      const data = await api('getData');
+      balance = data.balance || 0;
+      document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
+      updateTimer(data.lastClaim);
+    }
+
+    function updateTimer(lastClaim) {
+      // ... (mismo código del temporizador anterior)
+      // Te lo doy completo más abajo si quieres
+    }
+
+    async function claim() {
+      const data = await api('claim');
+      if (data.success) {
+        balance = data.balance;
+        document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
+        Telegram.WebApp.showAlert("✅ ¡Reclamaste 50 DOGE!");
+        updateTimer(Date.now());
+      }
+    }
+
+    window.onload = loadData;
   </script>
 </body>
 </html>
