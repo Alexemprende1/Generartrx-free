@@ -14,11 +14,7 @@
       margin: 0;
       padding: 20px;
     }
-    .coin { 
-      font-size: 120px; 
-      margin: 20px; 
-      animation: spin 6s linear infinite; 
-    }
+    .coin { font-size: 120px; margin: 20px; animation: spin 6s linear infinite; }
     .balance { font-size: 32px; color: #ffd700; margin: 10px; }
     .timer { font-size: 48px; color: #00ffcc; font-weight: bold; margin: 15px; }
     button { 
@@ -32,10 +28,7 @@
       width: 85%; 
     }
     button:disabled { background: #555; color: #aaa; }
-    @keyframes spin { 
-      from { transform: rotate(0deg); } 
-      to { transform: rotate(360deg); } 
-    }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -47,7 +40,7 @@
   <h2 class="balance" id="balance">0.00000000 DOGE</h2>
   <p>Generando (DOGE)</p>
   
-  <div class="timer" id="timer">00:00:00</div>
+  <div class="timer" id="timer">06:00:00</div>
   <p id="status">Cargando...</p>
   
   <button id="claimBtn" onclick="claim()">💎 Reclamar DOGE</button>
@@ -65,9 +58,8 @@
       if (lastClaim) {
         updateTimer(parseInt(lastClaim));
       } else {
-        document.getElementById("timer").innerText = "06:00:00";
-        document.getElementById("status").innerText = "¡Listo para reclamar!";
         document.getElementById("claimBtn").disabled = false;
+        document.getElementById("status").innerText = "¡Listo para reclamar!";
       }
     }
 
@@ -89,30 +81,9 @@
           return;
         }
 
-        const hours = Math.floor(remaining / (1000 * 60 * 60));
-        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+        const hours = Math.floor(remaining / (1000*60*60));
+        const minutes = Math.floor((remaining % (1000*60*60)) / (1000*60));
+        const seconds = Math.floor((remaining % (1000*60)) / 1000);
 
-        timerEl.innerText = `\( {hours.toString().padStart(2,'0')}: \){minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-        statusEl.innerText = "El generador está funcionando...";
-        claimBtn.disabled = true;
-      }, 1000);
-    }
-
-    function claim() {
-      balance += 50;
-      const now = Date.now();
-
-      localStorage.setItem('balance', balance);
-      localStorage.setItem('lastClaim', now);
-
-      document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
-      Telegram.WebApp.showAlert("✅ ¡Reclamaste 50 DOGE! El contador se reinició.");
-
-      updateTimer(now);
-    }
-
-    window.onload = loadData;
-  </script>
-</body>
-</html>
+        timerEl.innerText = hours.toString().padStart(2,'0') + ":" + 
+                           minutes.toString().padStart(2,'0') +
