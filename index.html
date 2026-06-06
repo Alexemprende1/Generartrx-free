@@ -6,28 +6,21 @@
   <title>TRX Miner</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body { background: #0f172a; color: white; font-family: Arial; text-align: center; padding: 20px; }
-    h1 { color: #22ff88; }
-    .balance { font-size: 32px; color: #22ff88; }
-    .timer { font-size: 45px; color: #00ffff; font-weight: bold; }
-    button { 
-      background: #22ff88; color: black; border: none; 
-      padding: 15px; margin: 10px; font-size: 18px; 
-      border-radius: 50px; width: 80%; 
-    }
+    body {background:#0f172a;color:white;font-family:Arial;text-align:center;padding:20px;margin:0;}
+    h1 {color:#22ff88;}
+    .balance {font-size:32px;color:#22ff88;margin:10px;}
+    .timer {font-size:45px;color:#00ffff;font-weight:bold;margin:15px;}
+    button {background:#22ff88;color:black;border:none;padding:15px;margin:10px;font-size:18px;border-radius:50px;width:80%;}
+    button:disabled {background:#555;color:#ccc;}
   </style>
 </head>
 <body>
   <h2>🔥 TRX MINER</h2>
   <h1>Generador de TRX</h1>
-  
-  <div style="font-size:100px;">💎</div>
-  
-  <div class="balance" id="balance">0.000000 TRX</div>
-  
+  <div style="font-size:100px;margin:20px;">💎</div>
+   <div class="balance" id="balance">0.000000 TRX</div>
   <div class="timer" id="timer">06:00:00</div>
   <p id="status">Cargando...</p>
-  
   <button id="claimBtn" onclick="claim()">💎 Reclamar TRX</button>
   <button onclick="Telegram.WebApp.close()">Cerrar</button>
 
@@ -65,7 +58,7 @@
         const m = Math.floor((remaining % 3600000) / 60000);
         const s = Math.floor((remaining % 60000) / 1000);
 
-        timerEl.innerText = `\( {h.toString().padStart(2,'0')}: \){m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        timerEl.innerText = h.toString().padStart(2,'0') + ":" + m.toString().padStart(2,'0') + ":" + s.toString().padStart(2,'0');
       }, 1000);
     }
 
