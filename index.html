@@ -14,16 +14,28 @@
       margin: 0;
       padding: 20px;
     }
-    .coin { font-size: 120px; margin: 20px; animation: spin 6s linear infinite; }
+    .coin { 
+      font-size: 120px; 
+      margin: 20px; 
+      animation: spin 6s linear infinite; 
+    }
     .balance { font-size: 32px; color: #ffd700; margin: 10px; }
     .timer { font-size: 48px; color: #00ffcc; font-weight: bold; margin: 15px; }
     button { 
-      background: #ffd700; color: black; border: none; 
-      padding: 16px 30px; margin: 10px; font-size: 18px; 
-      border-radius: 50px; width: 85%; 
+      background: #ffd700; 
+      color: black; 
+      border: none; 
+      padding: 16px 30px; 
+      margin: 10px; 
+      font-size: 18px; 
+      border-radius: 50px; 
+      width: 85%; 
     }
     button:disabled { background: #555; color: #aaa; }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes spin { 
+      from { transform: rotate(0deg); } 
+      to { transform: rotate(360deg); } 
+    }
   </style>
 </head>
 <body>
@@ -53,4 +65,54 @@
       if (lastClaim) {
         updateTimer(parseInt(lastClaim));
       } else {
-        document
+        document.getElementById("timer").innerText = "06:00:00";
+        document.getElementById("status").innerText = "¡Listo para reclamar!";
+        document.getElementById("claimBtn").disabled = false;
+      }
+    }
+
+    function updateTimer(lastClaimTime) {
+      const timerEl = document.getElementById("timer");
+      const statusEl = document.getElementById("status");
+      const claimBtn = document.getElementById("claimBtn");
+
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = now - lastClaimTime;
+        const remaining = CLAIM_TIME - elapsed;
+
+        if (remaining <= 0) {
+          timerEl.innerText = "06:00:00";
+          statusEl.innerText = "¡Listo para reclamar!";
+          claimBtn.disabled = false;
+          clearInterval(interval);
+          return;
+        }
+
+        const hours = Math.floor(remaining / (1000 * 60 * 60));
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+        timerEl.innerText = `\( {hours.toString().padStart(2,'0')}: \){minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+        statusEl.innerText = "El generador está funcionando...";
+        claimBtn.disabled = true;
+      }, 1000);
+    }
+
+    function claim() {
+      balance += 50;
+      const now = Date.now();
+
+      localStorage.setItem('balance', balance);
+      localStorage.setItem('lastClaim', now);
+
+      document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
+      Telegram.WebApp.showAlert("✅ ¡Reclamaste 50 DOGE! El contador se reinició.");
+
+      updateTimer(now); // Reinicia desde cero
+    }
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>
