@@ -6,11 +6,22 @@
   <title>Generador de Dogecoin</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body { background: linear-gradient(#1a1a2e, #16213e); color: white; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
-    .coin { font-size: 110px; margin: 20px; animation: spin 6s linear infinite; }
+    body {
+      background: linear-gradient(#1a1a2e, #16213e);
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    .coin { font-size: 120px; margin: 20px; animation: spin 6s linear infinite; }
     .balance { font-size: 32px; color: #ffd700; margin: 10px; }
-    .timer { font-size: 42px; color: #00ffcc; font-weight: bold; margin: 15px; }
-    button { background: #ffd700; color: black; border: none; padding: 16px 30px; margin: 10px; font-size: 18px; border-radius: 50px; width: 85%; }
+    .timer { font-size: 48px; color: #00ffcc; font-weight: bold; margin: 15px; }
+    button { 
+      background: #ffd700; color: black; border: none; 
+      padding: 16px 30px; margin: 10px; font-size: 18px; 
+      border-radius: 50px; width: 85%; 
+    }
     button:disabled { background: #555; color: #aaa; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
@@ -31,42 +42,15 @@
   <button onclick="Telegram.WebApp.close()">Cerrar</button>
 
   <script>
-    const userId = Telegram.WebApp.initDataUnsafe.user?.id;
     let balance = 0;
+    const CLAIM_TIME = 6 * 60 * 60 * 1000; // 6 horas
 
-    async function api(action, data = {}) {
-      const res = await fetch(`https://TU_BOT_URL_AQUÍ/webhook`, {  // Cambiaremos esto después
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, userId, ...data })
-      });
-      return res.json();
-    }
-
-    async function loadData() {
-      if (!userId) return;
-      const data = await api('getData');
-      balance = data.balance || 0;
+    function loadData() {
+      balance = parseFloat(localStorage.getItem('balance')) || 0;
       document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
-      updateTimer(data.lastClaim);
-    }
 
-    function updateTimer(lastClaim) {
-      // ... (mismo código del temporizador anterior)
-      // Te lo doy completo más abajo si quieres
-    }
-
-    async function claim() {
-      const data = await api('claim');
-      if (data.success) {
-        balance = data.balance;
-        document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
-        Telegram.WebApp.showAlert("✅ ¡Reclamaste 50 DOGE!");
-        updateTimer(Date.now());
-      }
-    }
-
-    window.onload = loadData;
-  </script>
-</body>
-</html>
+      const lastClaim = localStorage.getItem('lastClaim');
+      if (lastClaim) {
+        updateTimer(parseInt(lastClaim));
+      } else {
+        document
