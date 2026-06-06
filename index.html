@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generador de Dogecoin</title>
+  <title>Generador TRX</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
@@ -14,11 +14,11 @@
       margin: 0;
       padding: 20px;
     }
-    .coin { font-size: 120px; margin: 20px; animation: spin 6s linear infinite; }
-    .balance { font-size: 32px; color: #ffd700; margin: 10px; }
-    .timer { font-size: 48px; color: #00ffcc; font-weight: bold; margin: 15px; }
+    .coin { font-size: 110px; margin: 15px; animation: spin 8s linear infinite; }
+    .balance { font-size: 34px; color: #00ff9d; margin: 10px; }
+    .timer { font-size: 46px; color: #00ffff; font-weight: bold; margin: 12px; }
     button { 
-      background: #ffd700; 
+      background: #00ff9d; 
       color: black; 
       border: none; 
       padding: 16px 30px; 
@@ -28,85 +28,12 @@
       width: 85%; 
     }
     button:disabled { background: #555; color: #aaa; }
-    @keyframes spin { 
-      from { transform: rotate(0deg); } 
-      to { transform: rotate(360deg); } 
-    }
+    .rate { font-size: 18px; color: #ffd700; margin: 8px; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <h2>🐕 DOGE ARCADE</h2>
-  <h1>Generador de Dogecoin</h1>
+  <h2>🔥 TRX MINER</h2>
+  <h1>Generador de TRX</h1>
   
-  <div class="coin">🪙</div>
-  
-  <h2 class="balance" id="balance">0.00000000 DOGE</h2>
-  <p>Generando (DOGE)</p>
-  
-  <div class="timer" id="timer">06:00:00</div>
-  <p id="status">Cargando...</p>
-  
-  <button id="claimBtn" onclick="claim()">💎 Reclamar DOGE</button>
-  <button onclick="Telegram.WebApp.close()">Cerrar</button>
-
-  <script>
-    let balance = 0;
-    const CLAIM_TIME = 6 * 60 * 60 * 1000; // 6 horas
-
-    function loadData() {
-      balance = parseFloat(localStorage.getItem('balance')) || 0;
-      document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
-
-      const lastClaim = localStorage.getItem('lastClaim');
-      if (lastClaim) {
-        updateTimer(parseInt(lastClaim));
-      } else {
-        document.getElementById("status").innerText = "¡Listo para reclamar!";
-        document.getElementById("claimBtn").disabled = false;
-      }
-    }
-
-    function updateTimer(lastClaimTime) {
-      const timerEl = document.getElementById("timer");
-      const statusEl = document.getElementById("status");
-      const claimBtn = document.getElementById("claimBtn");
-
-      setInterval(() => {
-        const now = Date.now();
-        const elapsed = now - lastClaimTime;
-        const remaining = CLAIM_TIME - elapsed;
-
-        if (remaining <= 0) {
-          timerEl.innerText = "06:00:00";
-          statusEl.innerText = "¡Listo para reclamar!";
-          claimBtn.disabled = false;
-          return;
-        }
-
-        const hours = Math.floor(remaining / (1000*60*60));
-        const minutes = Math.floor((remaining % (1000*60*60)) / (1000*60));
-        const seconds = Math.floor((remaining % (1000*60)) / 1000);
-
-        timerEl.innerText = `\( {hours.toString().padStart(2,'0')}: \){minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-        statusEl.innerText = "El generador está funcionando...";
-        claimBtn.disabled = true;
-      }, 1000);
-    }
-
-    function claim() {
-      balance += 50;
-      const now = Date.now();
-
-      localStorage.setItem('balance', balance);
-      localStorage.setItem('lastClaim', now);
-
-      document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
-      Telegram.WebApp.showAlert("✅ ¡Reclamaste 50 DOGE! El contador se reinició.");
-
-      updateTimer(now);
-    }
-
-    window.onload = loadData;
-  </script>
-</body>
-</html>
+  <div class
