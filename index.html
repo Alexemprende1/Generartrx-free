@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dogecoin Generator</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      background: linear-gradient(#1a1a2e, #16213e);
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    .coin {
+      font-size: 120px;
+      margin: 20px;
+      animation: spin 4s linear infinite;
+    }
+    .balance {
+      font-size: 28px;
+      color: #ffd700;
+      margin: 10px;
+    }
+    .timer {
+      font-size: 36px;
+      color: #00ffcc;
+      font-weight: bold;
+      margin: 15px;
+    }
+    button {
+      background: #ffd700;
+      color: black;
+      border: none;
+      padding: 15px 30px;
+      margin: 10px;
+      font-size: 18px;
+      border-radius: 50px;
+      width: 80%;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h2>🐕 DOGE ARCADE</h2>
+  <h1>Generador de Dogecoin</h1>
+  
+  <div class="coin">🪙</div>
+  
+  <h2 class="balance" id="balance">0.00000000 DOGE</h2>
+  <p>Generando (DOGE)</p>
+  
+  <div class="timer" id="timer">01:49:10</div>
+  <p>¡El generador está funcionando! Cuanto más esperes, más DOGE podrás reclamar.</p>
+  
+  <button onclick="claim()">💎 Reclamar DOGE</button>
+  <button onclick="Telegram.WebApp.close()">Cerrar</button>
+
+  <script>
+    let balance = 0;
+    function claim() {
+      balance += 50;
+      document.getElementById("balance").innerText = balance.toFixed(8) + " DOGE";
+      Telegram.WebApp.showAlert("✅ ¡Reclamaste 50 DOGE!");
+    }
+  </script>
+</body>
+</html>
