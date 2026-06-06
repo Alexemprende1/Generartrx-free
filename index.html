@@ -21,7 +21,7 @@
         }
         @keyframes particleAnim {
             0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(0) translateY(-150px); opacity: 0; }
+            100% { transform: scale(0) translateY(-180px); opacity: 0; }
         }
     </style>
 </head>
@@ -33,8 +33,12 @@
                 <div class="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-3xl">₿</div>
                 <div>
                     <h1 class="text-2xl font-bold tron-glow">TRON MINER</h1>
-                    <p class="text-xs text-cyan-100">Mining Automático</p>
+                    <p class="text-xs text-cyan-100">Reclama cada 3 minutos</p>
                 </div>
+            </div>
+            <div class="text-right">
+                <div id="trxPrice" class="text-sm font-bold text-white">$0.00</div>
+                <div class="text-[10px] text-cyan-100">TRX USD</div>
             </div>
         </div>
 
@@ -47,22 +51,17 @@
                     <span class="text-4xl">₮</span>
                     <span class="text-2xl text-cyan-300">TRX</span>
                 </div>
+                <div id="balanceUSD" class="text-emerald-400 text-lg font-medium mt-2">$0.00</div>
             </div>
 
             <!-- Mining Button -->
             <div class="mt-8">
                 <button id="mineBtn" 
-                        class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center shadow-2xl shadow-cyan-500/50">
+                        class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center shadow-2xl shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed">
                     <i id="mineIcon" class="fas fa-bolt text-5xl mb-4"></i>
-                    <span id="mineText">INICIAR MINERO</span>
-                    <span id="statusText" class="text-sm mt-3 opacity-90"></span>
+                    <span id="mineText">RECLAMAR 0.001 TRX</span>
+                    <span id="countdownText" class="text-sm mt-3 opacity-90 hidden"></span>
                 </button>
-            </div>
-
-            <!-- Next Reward -->
-            <div id="nextRewardCard" class="hidden mt-6 bg-zinc-900 rounded-3xl p-5 text-center">
-                <p class="text-xs text-zinc-400">Próxima recompensa en</p>
-                <div id="countdown" class="text-4xl font-bold text-emerald-400 mt-2">03:00</div>
             </div>
 
             <!-- Stats -->
@@ -72,8 +71,8 @@
                     <div id="totalMined" class="text-3xl font-bold mt-1">0.000</div>
                 </div>
                 <div class="bg-zinc-900/70 rounded-2xl p-5">
-                    <p class="text-xs text-zinc-400">Recompensa por ciclo</p>
-                    <div class="text-3xl font-bold text-emerald-400 mt-1">0.001 TRX</div>
+                    <p class="text-xs text-zinc-400">Valor Actual</p>
+                    <div id="totalUSD" class="text-3xl font-bold text-emerald-400 mt-1">$0.00</div>
                 </div>
             </div>
         </div>
@@ -82,7 +81,7 @@
         <div class="px-6 mt-6">
             <div class="bg-zinc-900 rounded-3xl p-6 border border-amber-400/30">
                 <h3 class="font-semibold text-lg flex items-center gap-2 mb-4">
-                    <i class="fas fa-wallet"></i> Retirar
+                    <i class="fas fa-wallet"></i> Retirar Fondos
                 </h3>
                 <input id="withdrawAddress" type="text" placeholder="Dirección TRON (TRC20)" 
                        class="w-full bg-black border border-zinc-700 rounded-2xl px-5 py-4 text-sm focus:border-cyan-400 focus:outline-none">
@@ -94,33 +93,55 @@
         </div>
 
         <div class="px-6 mt-8 text-center text-xs text-zinc-500">
-            Simulador • Cada 3 minutos = 0.001 TRX
+            Precio en tiempo real vía CoinGecko • Cada clic = 0.001 TRX
         </div>
     </div>
 
     <script>
         let balance = parseFloat(localStorage.getItem('tronBalance')) || 0;
         let totalMined = parseFloat(localStorage.getItem('totalMined')) || 0;
-        let isMining = localStorage.getItem('isMining') === 'true';
-        let lastRewardTime = parseInt(localStorage.getItem('lastRewardTime')) || 0;
+        let lastClaimTime = parseInt(localStorage.getItem('lastClaimTime')) || 0;
+        let trxPrice = 0;
 
         const REWARD = 0.001;
-        const INTERVAL = 3 * 60 * 1000; // 3 minutos
+        const COOLDOWN = 3 * 60 * 1000;
 
         const balanceEl = document.getElementById('balance');
         const totalMinedEl = document.getElementById('totalMined');
+        const balanceUSDEl = document.getElementById('balanceUSD');
+        const totalUSDEl = document.getElementById('totalUSD');
+        const priceEl = document.getElementById('trxPrice');
         const mineBtn = document.getElementById('mineBtn');
         const mineText = document.getElementById('mineText');
-        const statusText = document.getElementById('statusText');
-        const nextRewardCard = document.getElementById('nextRewardCard');
-        const countdownEl = document.getElementById('countdown');
+        const countdownText = document.getElementById('countdownText');
         const withdrawBtn = document.getElementById('withdrawBtn');
 
-        let timerInterval = null;
+        let countdownInterval = null;
 
         function updateUI() {
             balanceEl.textContent = balance.toFixed(3);
             totalMinedEl.textContent = totalMined.toFixed(3);
+            
+            if (trxPrice > 0) {
+                const usdBalance = (balance * trxPrice).toFixed(2);
+                const usdTotal = (totalMined * trxPrice).toFixed(2);
+                balanceUSDEl.textContent = `≈ $${usdBalance}`;
+                totalUSDEl.textContent = `$${usdTotal}`;
+            }
+        }
+
+        async function fetchTRXPrice() {
+            try {
+                const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tron&vs_currencies=usd');
+                const data = await res.json();
+                trxPrice = data.tron.usd;
+                
+                priceEl.textContent = `$${trxPrice.toFixed(4)}`;
+                updateUI();
+            } catch (e) {
+                console.error("Error fetching price", e);
+                priceEl.textContent = "$0.32";
+            }
         }
 
         function createParticles(count) {
@@ -130,86 +151,56 @@
                 p.style.left = Math.random() * window.innerWidth + 'px';
                 p.style.top = (window.innerHeight * 0.35) + 'px';
                 document.body.appendChild(p);
-                setTimeout(() => p.remove(), 2500);
+                setTimeout(() => p.remove(), 2200);
             }
         }
 
-        function giveReward() {
+        function startCountdown() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownText.classList.remove('hidden');
+            mineBtn.disabled = true;
+
+            function updateTimer() {
+                const remaining = lastClaimTime + COOLDOWN - Date.now();
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    mineBtn.disabled = false;
+                    countdownText.classList.add('hidden');
+                    mineText.textContent = "RECLAMAR 0.001 TRX";
+                    return;
+                }
+                const minutes = Math.floor(remaining / 60000);
+                const seconds = Math.floor((remaining % 60000) / 1000);
+                countdownText.textContent = `Disponible en ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            updateTimer();
+            countdownInterval = setInterval(updateTimer, 1000);
+        }
+
+        function claimReward() {
+            const now = Date.now();
+            if (now - lastClaimTime < COOLDOWN) return;
+
             balance += REWARD;
             totalMined += REWARD;
-            lastRewardTime = Date.now();
+            lastClaimTime = now;
 
             localStorage.setItem('tronBalance', balance);
             localStorage.setItem('totalMined', totalMined);
-            localStorage.setItem('lastRewardTime', lastRewardTime);
+            localStorage.setItem('lastClaimTime', lastClaimTime);
 
             updateUI();
-            createParticles(30);
+            createParticles(35);
 
-            // Feedback visual
+            mineText.textContent = "+0.001 TRX!";
             mineBtn.classList.add('!bg-emerald-600');
-            setTimeout(() => mineBtn.classList.remove('!bg-emerald-600'), 800);
-        }
-
-        function startMiningTimer() {
-            if (timerInterval) clearInterval(timerInterval);
-
-            timerInterval = setInterval(() => {
-                if (!isMining) return;
-
-                const now = Date.now();
-                if (now - lastRewardTime >= INTERVAL) {
-                    giveReward();
-                }
-            }, 1000); // Comprobar cada segundo
-        }
-
-        function updateCountdown() {
-            if (!isMining) {
-                nextRewardCard.classList.add('hidden');
-                return;
-            }
-
-            nextRewardCard.classList.remove('hidden');
             
-            const remaining = INTERVAL - (Date.now() - lastRewardTime);
-            if (remaining <= 0) {
-                countdownEl.textContent = "00:00";
-                return;
-            }
-
-            const minutes = Math.floor(remaining / 60000);
-            const seconds = Math.floor((remaining % 60000) / 1000);
-            countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        function toggleMining() {
-            if (!isMining) {
-                // Activar
-                isMining = true;
-                if (!lastRewardTime) lastRewardTime = Date.now();
-                
-                localStorage.setItem('isMining', 'true');
-                localStorage.setItem('lastRewardTime', lastRewardTime);
-
-                mineText.textContent = "MINERÍA ACTIVA";
-                statusText.innerHTML = `<span class="text-emerald-400">● Minando cada 3 minutos</span>`;
-                mineBtn.classList.add('!from-emerald-500', '!to-cyan-600');
-
-                startMiningTimer();
-                updateCountdown();
-            } else {
-                // Detener (opcional)
-                if (confirm("¿Detener el minero?")) {
-                    isMining = false;
-                    localStorage.setItem('isMining', 'false');
-                    mineText.textContent = "INICIAR MINERO";
-                    statusText.textContent = "";
-                    mineBtn.classList.remove('!from-emerald-500', '!to-cyan-600');
-                    nextRewardCard.classList.add('hidden');
-                    if (timerInterval) clearInterval(timerInterval);
-                }
-            }
+            setTimeout(() => {
+                mineText.textContent = "RECLAMAR 0.001 TRX";
+                mineBtn.classList.remove('!bg-emerald-600');
+                startCountdown();
+            }, 1400);
         }
 
         function withdraw() {
@@ -218,37 +209,33 @@
                 return;
             }
             const address = document.getElementById('withdrawAddress').value.trim();
-            if (!address) {
-                alert("❌ Ingresa tu dirección TRON");
+            if (address.length < 30) {
+                alert("❌ Ingresa una dirección TRON válida");
                 return;
             }
-            if (confirm(`¿Retirar ${balance.toFixed(3)} TRX?`)) {
-                alert(`✅ Retiro de ${balance.toFixed(3)} TRX solicitado correctamente`);
+            if (confirm(`¿Retirar ${balance.toFixed(3)} TRX (≈ $${(balance * trxPrice).toFixed(2)})?`)) {
+                alert(`✅ ¡Retiro solicitado exitosamente!`);
                 balance = 0;
                 localStorage.setItem('tronBalance', balance);
                 updateUI();
             }
         }
 
-        // Inicialización
         function init() {
             updateUI();
+            fetchTRXPrice();
 
-            // Restaurar estado
-            if (isMining) {
-                mineText.textContent = "MINERÍA ACTIVA";
-                statusText.innerHTML = `<span class="text-emerald-400">● Minando cada 3 minutos</span>`;
-                mineBtn.classList.add('!from-emerald-500', '!to-cyan-600');
-                startMiningTimer();
+            // Actualizar precio cada 60 segundos
+            setInterval(fetchTRXPrice, 60000);
+
+            // Restaurar cooldown
+            const now = Date.now();
+            if (now - lastClaimTime < COOLDOWN) {
+                startCountdown();
             }
 
-            // Eventos
-            mineBtn.addEventListener('click', toggleMining);
+            mineBtn.addEventListener('click', claimReward);
             withdrawBtn.addEventListener('click', withdraw);
-
-            // Actualizar countdown cada segundo
-            setInterval(updateCountdown, 1000);
-            updateCountdown();
         }
 
         window.onload = init;
