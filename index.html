@@ -7,148 +7,251 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
             color: white;
         }
-        
-        .tron-glow {
-            text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff;
-        }
-        
-        .mining-btn {
-            transition: all 0.3s ease;
-        }
-        
-        .mining-btn:active {
-            transform: scale(0.95);
-        }
-        
-        .balance {
-            font-size: 3rem;
-            font-weight: 700;
-        }
-        
+        .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
+        .mining-btn { transition: all 0.4s ease; }
+        .balance { font-size: 3.2rem; font-weight: 700; }
         .particle {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: #00f0ff;
-            border-radius: 50%;
-            pointer-events: none;
-            animation: particleAnim 1.5s forwards;
+            position: absolute; width: 8px; height: 8px; background: #00f0ff;
+            border-radius: 50%; pointer-events: none; animation: particleAnim 2s forwards;
         }
-        
         @keyframes particleAnim {
             0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(0) translateY(-100px); opacity: 0; }
+            100% { transform: scale(0) translateY(-150px); opacity: 0; }
         }
     </style>
 </head>
 <body class="min-h-screen pb-20">
-    <div class="max-w-md mx-auto bg-black/80 min-h-screen">
+    <div class="max-w-md mx-auto bg-black/90 min-h-screen">
         <!-- Header -->
         <div class="bg-gradient-to-r from-cyan-500 to-blue-600 p-4 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-2xl">₿</div>
+                <div class="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-3xl">₿</div>
                 <div>
                     <h1 class="text-2xl font-bold tron-glow">TRON MINER</h1>
-                    <p class="text-xs text-cyan-100">TRX Mining Bot</p>
-                </div>
-            </div>
-            <div class="text-right">
-                <div class="text-xs opacity-75">Telegram Mini App</div>
-                <div class="flex items-center gap-1 text-xs">
-                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span>En línea</span>
+                    <p class="text-xs text-cyan-100">Mining Automático</p>
                 </div>
             </div>
         </div>
 
-        <!-- Balance Dashboard -->
+        <!-- Balance -->
         <div class="p-6">
             <div class="bg-zinc-900 rounded-3xl p-8 text-center border border-cyan-500/30">
-                <p class="text-cyan-400 text-sm font-medium tracking-widest">TU BALANCE</p>
-                <div id="balance" class="balance text-white mt-2">0.000</div>
-                <div class="flex items-center justify-center gap-2 mt-1">
-                    <span class="text-3xl">₮</span>
-                    <span class="text-xl text-cyan-300 font-semibold">TRX</span>
+                <p class="text-cyan-400 text-sm font-medium">TU BALANCE</p>
+                <div id="balance" class="balance text-white mt-3">0.000</div>
+                <div class="flex items-center justify-center gap-2">
+                    <span class="text-4xl">₮</span>
+                    <span class="text-2xl text-cyan-300">TRX</span>
                 </div>
             </div>
 
             <!-- Mining Button -->
             <div class="mt-8">
-                <button id="mineBtn"
-                        class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center shadow-2xl shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i id="mineIcon" class="fas fa-bolt text-4xl mb-3"></i>
-                    <span id="mineText">MINAR TRX</span>
-                    <span id="cooldownText" class="text-sm mt-2 opacity-75 hidden"></span>
+                <button id="mineBtn" 
+                        class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center shadow-2xl shadow-cyan-500/50">
+                    <i id="mineIcon" class="fas fa-bolt text-5xl mb-4"></i>
+                    <span id="mineText">INICIAR MINERO</span>
+                    <span id="statusText" class="text-sm mt-3 opacity-90"></span>
                 </button>
-                <p class="text-center text-xs text-zinc-500 mt-4">Cada clic = <span class="text-emerald-400 font-bold">0.001 TRX</span></p>
+            </div>
+
+            <!-- Next Reward -->
+            <div id="nextRewardCard" class="hidden mt-6 bg-zinc-900 rounded-3xl p-5 text-center">
+                <p class="text-xs text-zinc-400">Próxima recompensa en</p>
+                <div id="countdown" class="text-4xl font-bold text-emerald-400 mt-2">03:00</div>
             </div>
 
             <!-- Stats -->
             <div class="grid grid-cols-2 gap-4 mt-8">
                 <div class="bg-zinc-900/70 rounded-2xl p-5">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <p class="text-xs text-zinc-400">Minados hoy</p>
-                            <div id="todayMined" class="text-2xl font-bold text-emerald-400">0.000</div>
-                        </div>
-                        <i class="fas fa-chart-line text-3xl text-emerald-500"></i>
-                    </div>
+                    <p class="text-xs text-zinc-400">Total Minado</p>
+                    <div id="totalMined" class="text-3xl font-bold mt-1">0.000</div>
                 </div>
-                
                 <div class="bg-zinc-900/70 rounded-2xl p-5">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <p class="text-xs text-zinc-400">Total minado</p>
-                            <div id="totalMined" class="text-2xl font-bold">0.000</div>
-                        </div>
-                        <i class="fas fa-coins text-3xl text-amber-400"></i>
-                    </div>
+                    <p class="text-xs text-zinc-400">Recompensa por ciclo</p>
+                    <div class="text-3xl font-bold text-emerald-400 mt-1">0.001 TRX</div>
                 </div>
             </div>
         </div>
 
-        <!-- Withdraw Section -->
+        <!-- Withdraw -->
         <div class="px-6 mt-6">
             <div class="bg-zinc-900 rounded-3xl p-6 border border-amber-400/30">
-                <h3 class="font-semibold text-lg flex items-center gap-2">
-                    <i class="fas fa-wallet"></i>
-                    Retirar fondos
+                <h3 class="font-semibold text-lg flex items-center gap-2 mb-4">
+                    <i class="fas fa-wallet"></i> Retirar
                 </h3>
-                <div class="mt-4">
-                    <input id="withdrawAddress" 
-                           type="text" 
-                           placeholder="Tu dirección TRON (TRC20)"
-                           class="w-full bg-black border border-zinc-700 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-cyan-400">
-                </div>
-                
-                <button id="withdrawBtn"
-                        class="mt-4 w-full bg-gradient-to-r from-amber-500 to-yellow-600 py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 hover:brightness-110">
-                    <i class="fas fa-arrow-up"></i>
+                <input id="withdrawAddress" type="text" placeholder="Dirección TRON (TRC20)" 
+                       class="w-full bg-black border border-zinc-700 rounded-2xl px-5 py-4 text-sm focus:border-cyan-400 focus:outline-none">
+                <button id="withdrawBtn" 
+                        class="mt-4 w-full bg-gradient-to-r from-amber-500 to-yellow-600 py-5 rounded-2xl font-bold text-lg">
                     RETIRAR TODO
                 </button>
+            </div>
+        </div>
+
+        <div class="px-6 mt-8 text-center text-xs text-zinc-500">
+            Simulador • Cada 3 minutos = 0.001 TRX
+        </div>
+    </div>
+
+    <script>
+        let balance = parseFloat(localStorage.getItem('tronBalance')) || 0;
+        let totalMined = parseFloat(localStorage.getItem('totalMined')) || 0;
+        let isMining = localStorage.getItem('isMining') === 'true';
+        let lastRewardTime = parseInt(localStorage.getItem('lastRewardTime')) || 0;
+
+        const REWARD = 0.001;
+        const INTERVAL = 3 * 60 * 1000; // 3 minutos
+
+        const balanceEl = document.getElementById('balance');
+        const totalMinedEl = document.getElementById('totalMined');
+        const mineBtn = document.getElementById('mineBtn');
+        const mineText = document.getElementById('mineText');
+        const statusText = document.getElementById('statusText');
+        const nextRewardCard = document.getElementById('nextRewardCard');
+        const countdownEl = document.getElementById('countdown');
+        const withdrawBtn = document.getElementById('withdrawBtn');
+
+        let timerInterval = null;
+
+        function updateUI() {
+            balanceEl.textContent = balance.toFixed(3);
+            totalMinedEl.textContent = totalMined.toFixed(3);
+        }
+
+        function createParticles(count) {
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * window.innerWidth + 'px';
+                p.style.top = (window.innerHeight * 0.35) + 'px';
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 2500);
+            }
+        }
+
+        function giveReward() {
+            balance += REWARD;
+            totalMined += REWARD;
+            lastRewardTime = Date.now();
+
+            localStorage.setItem('tronBalance', balance);
+            localStorage.setItem('totalMined', totalMined);
+            localStorage.setItem('lastRewardTime', lastRewardTime);
+
+            updateUI();
+            createParticles(30);
+
+            // Feedback visual
+            mineBtn.classList.add('!bg-emerald-600');
+            setTimeout(() => mineBtn.classList.remove('!bg-emerald-600'), 800);
+        }
+
+        function startMiningTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                if (!isMining) return;
+
+                const now = Date.now();
+                if (now - lastRewardTime >= INTERVAL) {
+                    giveReward();
+                }
+            }, 1000); // Comprobar cada segundo
+        }
+
+        function updateCountdown() {
+            if (!isMining) {
+                nextRewardCard.classList.add('hidden');
+                return;
+            }
+
+            nextRewardCard.classList.remove('hidden');
+            
+            const remaining = INTERVAL - (Date.now() - lastRewardTime);
+            if (remaining <= 0) {
+                countdownEl.textContent = "00:00";
+                return;
+            }
+
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function toggleMining() {
+            if (!isMining) {
+                // Activar
+                isMining = true;
+                if (!lastRewardTime) lastRewardTime = Date.now();
                 
-                <p class="text-center text-xs text-zinc-500 mt-4">Mínimo de retiro: 1 TRX</p>
-            </div>
-        </div>
+                localStorage.setItem('isMining', 'true');
+                localStorage.setItem('lastRewardTime', lastRewardTime);
 
-        <!-- History -->
-        <div class="px-6 mt-8">
-            <h3 class="font-medium text-zinc-400 mb-3 flex items-center gap-2">
-                <i class="fas fa-history"></i>
-                HISTORIAL RECIENTE
-            </h3>
-            <div id="history" class="space-y-3">
-                <!-- JS populated -->
-            </div>
-        </div>
+                mineText.textContent = "MINERÍA ACTIVA";
+                statusText.innerHTML = `<span class="text-emerald-400">● Minando cada 3 minutos</span>`;
+                mineBtn.classList.add('!from-emerald-500', '!to-cyan-600');
 
-        <!-- Footer -->
-        <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-950 border-t border-zinc-800 p-3 text-center text-xs text-zinc-500">
-            Sim
+                startMiningTimer();
+                updateCountdown();
+            } else {
+                // Detener (opcional)
+                if (confirm("¿Detener el minero?")) {
+                    isMining = false;
+                    localStorage.setItem('isMining', 'false');
+                    mineText.textContent = "INICIAR MINERO";
+                    statusText.textContent = "";
+                    mineBtn.classList.remove('!from-emerald-500', '!to-cyan-600');
+                    nextRewardCard.classList.add('hidden');
+                    if (timerInterval) clearInterval(timerInterval);
+                }
+            }
+        }
+
+        function withdraw() {
+            if (balance < 1) {
+                alert("❌ Mínimo para retirar: 1 TRX");
+                return;
+            }
+            const address = document.getElementById('withdrawAddress').value.trim();
+            if (!address) {
+                alert("❌ Ingresa tu dirección TRON");
+                return;
+            }
+            if (confirm(`¿Retirar ${balance.toFixed(3)} TRX?`)) {
+                alert(`✅ Retiro de ${balance.toFixed(3)} TRX solicitado correctamente`);
+                balance = 0;
+                localStorage.setItem('tronBalance', balance);
+                updateUI();
+            }
+        }
+
+        // Inicialización
+        function init() {
+            updateUI();
+
+            // Restaurar estado
+            if (isMining) {
+                mineText.textContent = "MINERÍA ACTIVA";
+                statusText.innerHTML = `<span class="text-emerald-400">● Minando cada 3 minutos</span>`;
+                mineBtn.classList.add('!from-emerald-500', '!to-cyan-600');
+                startMiningTimer();
+            }
+
+            // Eventos
+            mineBtn.addEventListener('click', toggleMining);
+            withdrawBtn.addEventListener('click', withdraw);
+
+            // Actualizar countdown cada segundo
+            setInterval(updateCountdown, 1000);
+            updateCountdown();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
