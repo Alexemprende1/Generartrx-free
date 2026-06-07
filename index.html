@@ -265,7 +265,7 @@
                 timerEl.className = "timer text-emerald-400 animate-pulse";
                 timerStatus.textContent = "¡Listo para reclamar!";
                 mineBtn.disabled = false;
-                mineText.textContent = "VER ANUNCIO Y RECLAMAR 0.001 TRX";
+                mineText.textContent = "RECLAMAR TRX";
                 return;
             }
 
@@ -283,7 +283,7 @@
 
             if (!AdController) {
                 alert("❌ AdsGram no está listo. Reintentando...");
-                try { AdController = window.Adsgram.init({ blockId: "34341", debug: true }); } catch(e){}
+                try { AdController = window.Adsgram.init({ blockId: "34461", debug: true }); } catch(e){}
                 return;
             }
 
@@ -377,7 +377,7 @@
 
             // Inicializar AdsGram correctamente
             if (window.Adsgram) {
-                AdController = window.Adsgram.init({ blockId: "34341", debug: false });
+                AdController = window.Adsgram.init({ blockId: "34461", debug: false });
             } else {
                 console.error("Adsgram SDK no detectado.");
             }
