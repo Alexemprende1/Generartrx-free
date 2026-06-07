@@ -6,12 +6,13 @@
     <title>TRON Miner - Telegram Mini App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { 
             font-family: 'Inter', sans-serif; 
-            background: linear-gradient(135deg, #0a0a0a, #1a1a2e); 
+            background: #0a0a0a; 
             color: white; 
         }
         .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
@@ -30,100 +31,86 @@
         }
     </style>
 </head>
-<body class="min-h-screen pb-20">
-    <div class="max-w-md mx-auto bg-black/80 min-h-screen">
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-cyan-500 to-blue-600 p-4 flex items-center justify-between">
+<body class="min-h-screen bg-[#0a0a0a]">
+    <div class="max-w-md mx-auto bg-gradient-to-b from-[#0a0a0a] to-[#1a1a2e] min-h-screen pb-24 shadow-xl relative">
+        <div class="bg-gradient-to-r from-cyan-500 to-blue-600 p-4 flex items-center justify-between shadow-lg">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-2xl">₿</div>
+                <div class="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-2xl text-blue-600 font-bold">💎</div>
                 <div>
                     <h1 class="text-2xl font-bold tron-glow">TRON MINER</h1>
                     <p class="text-xs text-cyan-100">TRX Mining Bot</p>
                 </div>
             </div>
             <div class="text-right">
-                <div class="flex items-center gap-1 text-xs">
+                <div class="flex items-center gap-1 text-xs bg-black/30 px-2 py-1 rounded-full">
                     <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     <span>En línea</span>
                 </div>
             </div>
         </div>
 
-        <!-- Balance -->
-        <div class="p-6">
-            <div class="bg-zinc-900 rounded-3xl p-8 text-center border border-cyan-500/30">
+        <div class="p-6 space-y-6">
+            <div class="bg-zinc-900/90 rounded-3xl p-8 text-center border border-cyan-500/30 shadow-md">
                 <p class="text-cyan-400 text-sm font-medium tracking-widest">TU BALANCE</p>
-                <div id="balance" class="balance text-white mt-2">0.000</div>
+                <div id="balance" class="balance text-white mt-2">0.00000</div>
                 <div class="flex items-center justify-center gap-2 mt-1">
-                    <span class="text-3xl">₮</span>
-                    <span class="text-xl text-cyan-300 font-semibold">TRX</span>
+                    <span class="text-2xl text-cyan-400 font-bold">TRX</span>
                 </div>
             </div>
 
-            <!-- CRONÓMETRO -->
-            <div class="mt-6 bg-zinc-900/80 rounded-3xl p-6 text-center border border-cyan-400/30">
+            <div class="bg-zinc-900/80 rounded-3xl p-6 text-center border border-cyan-400/30 shadow-md">
                 <p class="text-cyan-400 text-sm font-medium mb-2">⏳ PRÓXIMA RECOMPENSA</p>
                 <div id="timer" class="timer text-emerald-400">03:00</div>
                 <p id="timerStatus" class="text-xs text-zinc-400 mt-1">Puedes reclamar cada 3 minutos</p>
             </div>
 
-            <!-- Mining Button -->
-            <div class="mt-6">
-                <button id="mineBtn" class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center shadow-2xl shadow-cyan-500/50 disabled:opacity-50">
-                    <i id="mineIcon" class="fas fa-bolt text-4xl mb-3"></i>
-                    <span id="mineText">VER ANUNCIO Y RECLAMAR 0.001 TRX</span>
+            <div>
+                <button id="mineBtn" class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-lg py-6 rounded-3xl flex flex-col items-center justify-center shadow-xl shadow-cyan-500/20 disabled:opacity-50 disabled:from-zinc-700 disabled:to-zinc-800">
+                    <i id="mineIcon" class="fas fa-bolt text-3xl mb-2"></i>
+                    <span id="mineText">VER ANUNCIO Y RECLAMAR</span>
                 </button>
-                <p class="text-center text-xs text-zinc-500 mt-4">Recompensa por anuncio: <span class="text-emerald-400 font-bold">0.001 TRX</span></p>
+                <p class="text-center text-xs text-zinc-500 mt-3">Recompensa por anuncio: <span class="text-emerald-400 font-bold">0.001 TRX</span></p>
             </div>
 
-            <!-- Invite -->
-            <div class="mt-4">
-                <button id="referBtn" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-6 rounded-3xl font-bold text-lg flex items-center justify-center gap-3">
+            <div>
+                <button id="referBtn" onclick="copyReferralLink()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-5 rounded-3xl font-bold text-lg flex items-center justify-center gap-3 shadow-lg shadow-purple-600/20">
                     <i class="fas fa-user-plus"></i> INVITAR AMIGOS
                 </button>
             </div>
 
-            <!-- Stats -->
-            <div class="grid grid-cols-2 gap-4 mt-8">
-                <div class="bg-zinc-900/70 rounded-2xl p-5">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-zinc-900/70 rounded-2xl p-5 border border-zinc-800">
                     <p class="text-xs text-zinc-400">Minados hoy</p>
-                    <div id="todayMined" class="text-2xl font-bold text-emerald-400">0.000</div>
+                    <div id="todayMined" class="text-xl font-bold text-emerald-400 mt-1">0.000</div>
                 </div>
-                <div class="bg-zinc-900/70 rounded-2xl p-5">
+                <div class="bg-zinc-900/70 rounded-2xl p-5 border border-zinc-800">
                     <p class="text-xs text-zinc-400">Total minado</p>
-                    <div id="totalMined" class="text-2xl font-bold">0.000</div>
+                    <div id="totalMined" class="text-xl font-bold mt-1">0.000</div>
                 </div>
             </div>
-        </div>
 
-        <!-- Referral, History, Withdraw (sin cambios) -->
-        <div class="px-6 mt-6">
-            <div class="bg-zinc-900 rounded-3xl p-6 border border-purple-400/30">
-                <h3 class="font-semibold text-lg flex items-center gap-2 mb-2"><i class="fas fa-users"></i> Mis Referidos</h3>
-                <p class="text-emerald-400 text-sm mb-4">Recibe el 15% de tus referidos</p>
-                <div id="referralLink" class="bg-black p-4 rounded-2xl text-sm break-all mb-3 font-mono"></div>
-                <button onclick="copyReferralLink()" class="w-full bg-purple-600 py-3 rounded-2xl font-medium flex items-center justify-center gap-2">
+            <div class="bg-zinc-900 rounded-3xl p-6 border border-purple-400/30 space-y-3">
+                <h3 class="font-semibold text-lg flex items-center gap-2"><i class="fas fa-users"></i> Mis Referidos</h3>
+                <p class="text-emerald-400 text-sm">Recibe el 15% de tus referidos</p>
+                <div id="referralLink" class="bg-black/50 p-4 rounded-2xl text-xs break-all font-mono border border-zinc-800 select-all text-purple-300">Cargando enlace...</div>
+                <button onclick="copyReferralLink()" class="w-full bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 py-3 rounded-2xl font-medium flex items-center justify-center gap-2 border border-purple-500/30 transition">
                     <i class="fas fa-copy"></i> Copiar Enlace
                 </button>
             </div>
-        </div>
 
-        <div class="px-6 mt-6">
             <div class="bg-zinc-900 rounded-3xl p-6 border border-emerald-400/30">
                 <h3 class="font-semibold text-lg flex items-center gap-2 mb-4"><i class="fas fa-gift"></i> Historial de Comisiones</h3>
-                <div id="commissionHistory" class="space-y-3 max-h-60 overflow-y-auto"></div>
+                <div id="commissionHistory" class="space-y-3 max-h-48 overflow-y-auto pr-1"></div>
             </div>
-        </div>
 
-        <div class="px-6 mt-6">
-            <div class="bg-zinc-900 rounded-3xl p-6 border border-amber-400/30">
+            <div class="bg-zinc-900 rounded-3xl p-6 border border-amber-400/30 space-y-4">
                 <h3 class="font-semibold text-lg flex items-center gap-2"><i class="fas fa-wallet"></i> Retirar fondos</h3>
-                <input id="withdrawAddress" type="text" placeholder="Tu dirección TRON (TRC20)" class="w-full mt-4 bg-black border border-zinc-700 rounded-2xl px-5 py-4 text-sm">
-                <button id="withdrawBtn" class="mt-4 w-full bg-gradient-to-r from-amber-500 to-yellow-600 py-5 rounded-2xl font-bold text-lg">RETIRAR TODO</button>
+                <input id="withdrawAddress" type="text" placeholder="Tu dirección TRON (TRC20)" class="w-full bg-black border border-zinc-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-amber-500 text-white">
+                <button id="withdrawBtn" class="w-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 py-4 rounded-2xl font-bold text-lg shadow-lg shadow-amber-500/10 transition">RETIRAR TODO</button>
             </div>
         </div>
 
-        <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-950 border-t border-zinc-800 p-3 text-center text-xs text-zinc-500">
+        <div class="absolute bottom-0 left-0 right-0 bg-zinc-950/80 backdrop-blur-md border-t border-zinc-800/60 p-3 text-center text-xs text-zinc-500">
             TRON Miner • AdsGram + 15% Referidos
         </div>
     </div>
@@ -140,13 +127,12 @@
         let balance = 0;
         let totalMined = 0;
         let lastMineTime = 0;
-        let commissions = [];
         const COOLDOWN = 3 * 60 * 1000; // 3 minutos
         
         let AdController = null;
         let timerInterval = null;
 
-        // Elementos
+        // Elementos UI
         const balanceEl = document.getElementById('balance');
         const totalMinedEl = document.getElementById('totalMined');
         const todayMinedEl = document.getElementById('todayMined');
@@ -158,93 +144,107 @@
 
         async function supabaseRequest(endpoint, method = "GET", body = null) {
             try {
-                const res = await fetch(SUPABASE_URL + endpoint, {
-                    method, headers: {
-                        "apikey": SUPABASE_ANON_KEY,
-                        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-                        "Content-Type": "application/json",
-                        "Prefer": "return=representation"
-                    },
-                    body: body ? JSON.stringify(body) : null
-                });
+                const headers = {
+                    "apikey": SUPABASE_ANON_KEY,
+                    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+                    "Content-Type": "application/json",
+                    "Prefer": "return=representation"
+                };
+                const config = { method, headers };
+                if (body) config.body = JSON.stringify(body);
+
+                const res = await fetch(SUPABASE_URL + endpoint, config);
                 return await res.json();
-            } catch (e) { console.error(e); return []; }
+            } catch (e) { 
+                console.error("Error en Supabase:", e); 
+                return []; 
+            }
         }
 
-        async function initUser() { /* ... (mismo código anterior) */ 
+        async function initUser() {
+            let referredBy = null;
+
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.ready();
-                const user = window.Telegram.WebApp.initDataUnsafe.user;
-             if (referredBy == telegramUserId) {
-    referredBy = null;
-}
+                window.Telegram.WebApp.expand();
+                const user = window.Telegram.WebApp.initDataUnsafe?.user;
+                if (user) {
+                    telegramUserId = user.id;
+                }
+                
+                const startParam = window.Telegram.WebApp.initDataUnsafe?.start_param;
                 if (startParam && startParam.startsWith("ref_")) {
-    referredBy = startParam.replace("ref_", "");
-}
+                    referredBy = startParam.replace("ref_", "");
+                }
+            }
 
-if (referredBy == telegramUserId) {
-    referredBy = null;
-}
+            // Fallback para desarrollo local si no se abre desde Telegram
+            if (!telegramUserId) {
+                telegramUserId = 123456789; 
+            }
 
-// Leer parámetro start del bot
-const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-
-if (startParam && startParam.startsWith("ref_")) {
-    referredBy = startParam.replace("ref_", "");
-}
-            if (!telegramUserId) telegramUserId = 123456789;
+            if (referredBy == telegramUserId) {
+                referredBy = null;
+            }
 
             let users = await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`);
+            
             if (users && users.length > 0) {
                 currentUser = users[0];
             } else {
-const newUser = {
-    telegram_id: telegramUserId,
-    username: `user_${telegramUserId}`,
-    balance: 0,
-    total_mined: 0,
-    referrals_count: 0,
-    referred_by: referredBy
-};
+                const newUser = {
+                    telegram_id: telegramUserId,
+                    username: `user_${telegramUserId}`,
+                    balance: 0,
+                    total_mined: 0,
+                    referrals_count: 0,
+                    referred_by: referredBy
+                };
+                
                 const created = await supabaseRequest("users", "POST", newUser);
-               // Incrementar contador del referidor
-if (referredBy) {
-    const refUsers = await supabaseRequest(
-        `users?telegram_id=eq.${referredBy}`
-    );
+                if (created && created.length > 0) {
+                    currentUser = created[0];
+                }
 
-    if (refUsers.length > 0) {
-        const refUser = refUsers[0];
-
-        await supabaseRequest(
-            `users?telegram_id=eq.${referredBy}`,
-            "PATCH",
-            {
-                referrals_count: (refUser.referrals_count || 0) + 1
+                // Incrementar contador del que invitó
+                if (referredBy) {
+                    const refUsers = await supabaseRequest(`users?telegram_id=eq.${referredBy}`);
+                    if (refUsers && refUsers.length > 0) {
+                        const refUser = refUsers[0];
+                        await supabaseRequest(`users?telegram_id=eq.${referredBy}`, "PATCH", {
+                            referrals_count: (refUser.referrals_count || 0) + 1
+                        });
+                    }
+                }
             }
-        );
-    }
-}
-            balance = currentUser.balance || 0;
-            totalMined = currentUser.total_mined || 0;
+
+            if (currentUser) {
+                balance = currentUser.balance || 0;
+                totalMined = currentUser.total_mined || 0;
+            }
             updateUI();
         }
 
         function getReferralLink() {
-    if (!telegramUserId) return "";
-
-    return `https://t.me/${BOT_USERNAME}?start=ref_${telegramUserId}`;
-}
+            if (!telegramUserId) return "";
+            return `https://t.me/${BOT_USERNAME}?start=ref_${telegramUserId}`;
+        }
 
         function copyReferralLink() {
-            navigator.clipboard.writeText(getReferralLink()).then(() => alert("✅ Enlace copiado!"));
+            const link = getReferralLink();
+            if (!link) return;
+            navigator.clipboard.writeText(link).then(() => {
+                alert("✅ ¡Enlace de referido copiado al portapapeles!");
+            }).catch(() => {
+                alert("No se pudo copiar automáticamente. Selecciónalo manualmente.");
+            });
         }
 
         function updateUI() {
-            balanceEl.textContent = balance.toFixed(3);
-            totalMinedEl.textContent = totalMined.toFixed(3);
-            todayMinedEl.textContent = (balance * 0.7).toFixed(3);
-            document.getElementById('referralLink').textContent = getReferralLink();
+            balanceEl.textContent = balance.toFixed(5);
+            totalMinedEl.textContent = totalMined.toFixed(5);
+            todayMinedEl.textContent = (totalMined * 0.4).toFixed(5); // Ajustado para simular minado diario coherente
+            document.getElementById('referralLink').textContent = getReferralLink() || "Generando...";
         }
 
         function createParticles(count) {
@@ -254,7 +254,7 @@ if (referredBy) {
                 p.style.left = `${Math.random() * window.innerWidth}px`;
                 p.style.top = `${window.innerHeight * 0.35}px`;
                 document.body.appendChild(p);
-                setTimeout(() => p.remove(), 2000);
+                setTimeout(() => p.remove(), 1500);
             }
         }
 
@@ -262,28 +262,28 @@ if (referredBy) {
             const timeLeft = COOLDOWN - (Date.now() - lastMineTime);
             if (timeLeft <= 0) {
                 timerEl.textContent = "00:00";
-                timerEl.classList.add('text-emerald-400');
+                timerEl.className = "timer text-emerald-400 animate-pulse";
                 timerStatus.textContent = "¡Listo para reclamar!";
                 mineBtn.disabled = false;
-                mineText.textContent = "RECLAMAR 0.001 TRX";
-                mineText.classList.add('text-emerald-300');
+                mineText.textContent = "VER ANUNCIO Y RECLAMAR 0.001 TRX";
                 return;
             }
 
             const minutes = Math.floor(timeLeft / 60000);
             const seconds = Math.floor((timeLeft % 60000) / 1000);
             timerEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            timerEl.className = "timer text-amber-400";
             
             mineBtn.disabled = true;
             mineText.textContent = "ESPERA EL CRONÓMETRO";
-            mineText.classList.remove('text-emerald-300');
         }
 
         async function mine() {
             if (Date.now() - lastMineTime < COOLDOWN) return;
 
             if (!AdController) {
-                alert("❌ AdsGram no disponible. Recarga la app.");
+                alert("❌ AdsGram no está listo. Reintentando...");
+                try { AdController = window.Adsgram.init({ blockId: "34341", debug: true }); } catch(e){}
                 return;
             }
 
@@ -292,6 +292,7 @@ if (referredBy) {
             mineIcon.classList.add('fa-spin');
 
             try {
+                // Ejecución del anuncio AdsGram
                 await AdController.show();
 
                 const reward = 0.001;
@@ -300,109 +301,96 @@ if (referredBy) {
                 lastMineTime = Date.now();
                 localStorage.setItem('lastMineTime', lastMineTime);
 
-               if (currentUser?.invited_by) {
+                // SISTEMA DE COMISIÓN DE REFERIDOS (Corregido de 'invited_by' a 'referred_by')
+                if (currentUser && currentUser.referred_by) {
+                    const referrerId = currentUser.referred_by;
+                    const commission = reward * 0.15;
 
-    const commission = reward * 0.15;
+                    const refUsers = await supabaseRequest(`users?telegram_id=eq.${referrerId}`);
 
-    // Buscar referidor
-    const refUsers = await supabaseRequest(
-        `users?telegram_id=eq.${currentUser.invited_by}`
-    );
+                    if (refUsers && refUsers.length > 0) {
+                        const refUser = refUsers[0];
 
-    if (refUsers.length > 0) {
+                        // Sumar comisión al balance del padrino
+                        await supabaseRequest(`users?telegram_id=eq.${referrerId}`, "PATCH", {
+                            balance: parseFloat(((refUser.balance || 0) + commission).toFixed(5))
+                        });
 
-        const refUser = refUsers[0];
+                        // Guardar log en el historial
+                        await supabaseRequest("referral_commissions", "POST", {
+                            referrer_id: parseInt(referrerId),
+                            referred_user_id: telegramUserId,
+                            amount: commission
+                        });
+                    }
+                }
 
-        // Actualizar balance del referidor
-        await supabaseRequest(
-            `users?telegram_id=eq.${currentUser.invited_by}`,
-            "PATCH",
-            {
-                balance: parseFloat(
-                    ((refUser.balance || 0) + commission).toFixed(5)
-                )
-            }
-        );
-
-        // Guardar historial
-        await supabaseRequest(
-            "referral_commissions",
-            "POST",
-            {
-                referrer_id: currentUser.invited_by,
-                referred_user_id: telegramUserId,
-                amount: commission
-            }
-        );
-    }
-}
-
+                // Guardar datos del usuario actual
                 await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
                     balance: parseFloat(balance.toFixed(5)),
                     total_mined: parseFloat(totalMined.toFixed(5))
                 });
 
                 updateUI();
-                createParticles(30);
+                createParticles(20);
+                loadCommissionHistory();
 
-                mineText.textContent = '+0.001 TRX AÑADIDO!';
-                setTimeout(() => {
-                    updateTimer();
-                }, 1800);
+                mineText.textContent = '¡+0.001 TRX RECLAMADO!';
+                setTimeout(updateTimer, 1800);
 
             } catch (e) {
-                mineText.textContent = "Anuncio cancelado";
-                setTimeout(updateTimer, 1500);
+                console.warn("Anuncio omitido o error:", e);
+                alert("⚠️ Debes ver el anuncio completo para recibir la recompensa.");
+                updateTimer();
             } finally {
                 mineIcon.classList.remove('fa-spin');
             }
         }
-async function loadCommissionHistory() {
 
-    const history = await supabaseRequest(
-        `referral_commissions?referrer_id=eq.${telegramUserId}&order=created_at.desc`
-    );
+        async function loadCommissionHistory() {
+            if (!telegramUserId) return;
+            const history = await supabaseRequest(`referral_commissions?referrer_id=eq.${telegramUserId}&order=created_at.desc`);
+            const container = document.getElementById('commissionHistory');
 
-    const container = document.getElementById('commissionHistory');
+            if (!history || !history.length) {
+                container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">Sin comisiones aún</p>';
+                return;
+            }
 
-    if (!history.length) {
-        container.innerHTML =
-            '<p class="text-zinc-500 text-sm">Sin comisiones aún</p>';
-        return;
-    }
-
-    container.innerHTML = history.map(item => `
-        <div class="bg-black/40 rounded-xl p-3 flex justify-between items-center">
-            <div>
-                <div class="text-sm text-cyan-300">
-                    Usuario ${item.referred_user_id}
+            container.innerHTML = history.map(item => `
+                <div class="bg-black/40 rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
+                    <div>
+                        <div class="text-xs text-cyan-300 font-mono">ID: ${item.referred_user_id}</div>
+                        <div class="text-[10px] text-zinc-500">${new Date(item.created_at).toLocaleString()}</div>
+                    </div>
+                    <div class="text-emerald-400 font-bold text-sm">+${Number(item.amount).toFixed(5)} TRX</div>
                 </div>
+            `).join('');
+        }
 
-                <div class="text-xs text-zinc-500">
-                    ${new Date(item.created_at).toLocaleString()}
-                </div>
-            </div>
-
-            <div class="text-emerald-400 font-bold">
-                +${Number(item.amount).toFixed(5)} TRX
-            </div>
-        </div>
-    `).join('');
-}
         async function init() {
+            // Inicializar usuario desde Telegram / Supabase
             await initUser();
             
+            // Cargar historial
             await loadCommissionHistory();
 
-            AdController = window.Adsgram.init({ blockId: "34341", debug: true });
+            // Inicializar AdsGram correctamente
+            if (window.Adsgram) {
+                AdController = window.Adsgram.init({ blockId: "34341", debug: false });
+            } else {
+                console.error("Adsgram SDK no detectado.");
+            }
 
+            // Recuperar tiempo de espera local
             const savedTime = localStorage.getItem('lastMineTime');
             if (savedTime) lastMineTime = parseInt(savedTime);
 
-            // Iniciar cronómetro
+            // Iniciar Reloj
             updateTimer();
             timerInterval = setInterval(updateTimer, 1000);
 
+            // Listener del botón
             mineBtn.addEventListener('click', mine);
         }
 
