@@ -10,25 +10,13 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
-            color: white;
-        }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0a0a0a, #1a1a2e); color: white; }
         .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
         .mining-btn { transition: all 0.3s ease; }
         .mining-btn:active { transform: scale(0.95); }
         .balance { font-size: 3rem; font-weight: 700; }
-        .particle {
-            position: absolute; width: 6px; height: 6px;
-            background: #00f0ff; border-radius: 50%;
-            pointer-events: none; animation: particleAnim 1.5s forwards;
-        }
-        @keyframes particleAnim {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(0) translateY(-100px); opacity: 0; }
-        }
+        .particle { position: absolute; width: 6px; height: 6px; background: #00f0ff; border-radius: 50%; pointer-events: none; animation: particleAnim 1.5s forwards; }
+        @keyframes particleAnim { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0) translateY(-100px); opacity: 0; } }
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -62,9 +50,9 @@
                 </div>
             </div>
 
-            <!-- Mining Button -->
+            <!-- Mining -->
             <div class="mt-8">
-                <button id="mineBtn" class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center shadow-2xl shadow-cyan-500/50 disabled:opacity-50">
+                <button id="mineBtn" class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center shadow-2xl shadow-cyan-500/50 disabled:opacity-50">
                     <i class="fas fa-bolt text-4xl mb-3"></i>
                     <span id="mineText">VER ANUNCIO Y MINAR TRX</span>
                     <span id="cooldownText" class="text-sm mt-2 opacity-75 hidden"></span>
@@ -72,11 +60,10 @@
                 <p class="text-center text-xs text-zinc-500 mt-4">Ver anuncio = <span class="text-emerald-400 font-bold">0.001 TRX</span></p>
             </div>
 
-            <!-- Referidos Button -->
+            <!-- Invite -->
             <div class="mt-4">
-                <button id="referBtn" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-6 rounded-3xl font-bold text-lg flex items-center justify-center gap-3 hover:brightness-110">
-                    <i class="fas fa-user-plus"></i>
-                    INVITAR AMIGOS
+                <button id="referBtn" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-6 rounded-3xl font-bold text-lg flex items-center justify-center gap-3">
+                    <i class="fas fa-user-plus"></i> INVITAR AMIGOS
                 </button>
             </div>
 
@@ -93,51 +80,46 @@
             </div>
         </div>
 
-        <!-- Referidos Section -->
+        <!-- Referral Section -->
         <div class="px-6 mt-6">
             <div class="bg-zinc-900 rounded-3xl p-6 border border-purple-400/30">
-                <h3 class="font-semibold text-lg flex items-center gap-2 mb-4">
-                    <i class="fas fa-users"></i> Mis Referidos
-                </h3>
-                <div id="referralLink" class="bg-black p-4 rounded-2xl text-sm break-all mb-3"></div>
-                <button onclick="copyReferralLink()" class="w-full bg-purple-600 py-3 rounded-2xl font-medium">Copiar Enlace de Invitación</button>
+                <h3 class="font-semibold text-lg flex items-center gap-2 mb-4"><i class="fas fa-users"></i> Mis Referidos</h3>
+                <div id="referralLink" class="bg-black p-4 rounded-2xl text-sm break-all mb-3 font-mono"></div>
+                <button onclick="copyReferralLink()" class="w-full bg-purple-600 py-3 rounded-2xl font-medium flex items-center justify-center gap-2">
+                    <i class="fas fa-copy"></i> Copiar Enlace
+                </button>
             </div>
         </div>
 
-        <!-- Withdraw Section -->
+        <!-- Withdraw -->
         <div class="px-6 mt-6">
             <div class="bg-zinc-900 rounded-3xl p-6 border border-amber-400/30">
                 <h3 class="font-semibold text-lg flex items-center gap-2"><i class="fas fa-wallet"></i> Retirar fondos</h3>
-                <input id="withdrawAddress" type="text" placeholder="Tu dirección TRON (TRC20)" class="w-full mt-4 bg-black border border-zinc-700 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-cyan-400">
-                <button id="withdrawBtn" class="mt-4 w-full bg-gradient-to-r from-amber-500 to-yellow-600 py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-2">RETIRAR TODO</button>
+                <input id="withdrawAddress" type="text" placeholder="Tu dirección TRON (TRC20)" class="w-full mt-4 bg-black border border-zinc-700 rounded-2xl px-5 py-4 text-sm">
+                <button id="withdrawBtn" class="mt-4 w-full bg-gradient-to-r from-amber-500 to-yellow-600 py-5 rounded-2xl font-bold text-lg">RETIRAR TODO</button>
             </div>
         </div>
 
-        <!-- Footer -->
         <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-950 border-t border-zinc-800 p-3 text-center text-xs text-zinc-500">
-            TRON Miner • Powered by AdsGram + Supabase
+            TRON Miner • 15% Comisión por Referidos
         </div>
     </div>
 
     <script>
-        // ==================== CONFIGURACIÓN SUPABASE ====================
         const SUPABASE_URL = "https://gmyysxuszqwhsbuglvos.supabase.co/rest/v1/";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdteXlzeHVzenF3aHNidWdsdm9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODExOTQsImV4cCI6MjA5NjM1NzE5NH0.C-1TCD8BG-GJtJl6hxJGmo60rqyNee4Q_bsEebRIveQ";
 
         let currentUser = null;
         let telegramUserId = null;
+        const BOT_USERNAME = "generartrx2026bot";
 
-        // ==================== VARIABLES DEL JUEGO ====================
         let balance = 0;
         let totalMined = 0;
         let lastMineTime = 0;
-        let history = [];
         const COOLDOWN = 3 * 60 * 1000;
-
-        // AdsGram
         let AdController;
 
-        // Elementos DOM
+        // DOM Elements
         const balanceEl = document.getElementById('balance');
         const totalMinedEl = document.getElementById('totalMined');
         const todayMinedEl = document.getElementById('todayMined');
@@ -146,47 +128,48 @@
         const cooldownText = document.getElementById('cooldownText');
         const referBtn = document.getElementById('referBtn');
 
-        // ==================== FUNCIONES SUPABASE ====================
         async function supabaseRequest(endpoint, method = "GET", body = null) {
-            const headers = {
-                "apikey": SUPABASE_ANON_KEY,
-                "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-                "Content-Type": "application/json",
-                "Prefer": "return=representation"
-            };
-
-            const options = { method, headers };
-            if (body) options.body = JSON.stringify(body);
-
-            const res = await fetch(SUPABASE_URL + endpoint, options);
+            const res = await fetch(SUPABASE_URL + endpoint, {
+                method,
+                headers: {
+                    "apikey": SUPABASE_ANON_KEY,
+                    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+                    "Content-Type": "application/json",
+                    "Prefer": "return=representation"
+                },
+                body: body ? JSON.stringify(body) : null
+            });
             return res.json();
         }
 
         async function initUser() {
-            // Obtener datos de Telegram Mini App
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.ready();
                 const user = window.Telegram.WebApp.initDataUnsafe.user;
+                const startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
                 if (user) telegramUserId = user.id;
+
+                // Detectar referencia
+                let referredBy = null;
+                if (startParam && startParam.startsWith('ref_')) {
+                    referredBy = parseInt(startParam.replace('ref_', ''));
+                }
             }
 
-            if (!telegramUserId) {
-                telegramUserId = 123456789; // ID de prueba si no está en Telegram
-            }
+            if (!telegramUserId) telegramUserId = 123456789; // Prueba
 
-            // Buscar o crear usuario
             let users = await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`);
-            
+
             if (users.length > 0) {
                 currentUser = users[0];
             } else {
                 const newUser = {
                     telegram_id: telegramUserId,
-                    username: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "user_" + telegramUserId,
+                    username: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || `user_${telegramUserId}`,
                     balance: 0,
                     total_mined: 0,
                     referrals_count: 0,
-                    referred_by: null
+                    referred_by: referredBy
                 };
                 const created = await supabaseRequest("users", "POST", newUser);
                 currentUser = created[0];
@@ -197,29 +180,34 @@
             updateUI();
         }
 
+        async function giveReferralBonus(referrerId, amount) {
+            if (!referrerId) return;
+            const bonus = parseFloat((amount * 0.15).toFixed(5));
+            await supabaseRequest(`users?telegram_id=eq.${referrerId}`, "PATCH", {
+                balance: `balance + ${bonus}`,
+                total_mined: `total_mined + ${bonus}`
+            });
+        }
+
         async function saveToSupabase() {
             if (!currentUser) return;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
-                balance: balance,
-                total_mined: totalMined
+                balance: parseFloat(balance.toFixed(5)),
+                total_mined: parseFloat(totalMined.toFixed(5))
             });
         }
 
-        // ==================== REFERRAL SYSTEM ====================
         function getReferralLink() {
-            return `https://t.me/TuBotUsername?start=ref_${telegramUserId}`;
+            return `https://t.me/${BOT_USERNAME}?start=ref_${telegramUserId}`;
         }
 
         function copyReferralLink() {
-            const link = getReferralLink();
-            navigator.clipboard.writeText(link).then(() => {
-                alert("✅ Enlace copiado:\n" + link);
+            navigator.clipboard.writeText(getReferralLink()).then(() => {
+                alert("✅ Enlace de invitación copiado!");
             });
         }
 
-        // ==================== MINING CON ADSGRAM ====================
         async function mine() {
-            // ... (mismo código anterior con AdsGram)
             const now = Date.now();
             if (now - lastMineTime < COOLDOWN) {
                 const remaining = Math.ceil((COOLDOWN - (now - lastMineTime)) / 1000);
@@ -231,23 +219,26 @@
             mineBtn.disabled = true;
 
             try {
-                const result = await AdController.show();
+                await AdController.show();
                 const reward = 0.001;
 
+                // Ganancia del usuario
                 balance += reward;
                 totalMined += reward;
+
+                // Comisión al referido (15%)
+                if (currentUser.referred_by) {
+                    await giveReferralBonus(currentUser.referred_by, reward);
+                }
+
                 lastMineTime = now;
-
                 await saveToSupabase();
-
-                const timeStr = new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
-                history.unshift({ amount: reward, time: timeStr });
 
                 updateUI();
                 createParticles(30);
 
                 mineText.textContent = '+0.001 TRX!';
-                setTimeout(() => mineText.textContent = "VER ANUNCIO Y MINAR TRX", 1500);
+                setTimeout(() => mineText.textContent = "VER ANUNCIO Y MINAR TRX", 1800);
             } catch (e) {
                 mineText.textContent = "Anuncio no completado";
                 setTimeout(() => mineText.textContent = "VER ANUNCIO Y MINAR TRX", 1500);
@@ -256,7 +247,22 @@
             }
         }
 
-        function showCooldown(seconds) { /* mismo código anterior */ }
+        function showCooldown(seconds) {
+            mineBtn.disabled = true;
+            cooldownText.classList.remove('hidden');
+            const interval = setInterval(() => {
+                seconds--;
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    mineBtn.disabled = false;
+                    cooldownText.classList.add('hidden');
+                    return;
+                }
+                const min = Math.floor(seconds / 60);
+                const sec = seconds % 60;
+                cooldownText.textContent = `Disponible en ${min}:${sec < 10 ? '0' : ''}${sec}`;
+            }, 1000);
+        }
 
         function updateUI() {
             balanceEl.textContent = balance.toFixed(3);
@@ -265,9 +271,18 @@
             document.getElementById('referralLink').textContent = getReferralLink();
         }
 
-        function createParticles(count) { /* mismo código anterior */ }
+        function createParticles(count) {
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = `${Math.random() * window.innerWidth}px`;
+                p.style.top = `${window.innerHeight * 0.35}px`;
+                p.style.background = `hsl(${Math.random()*40 + 170}, 100%, 70%)`;
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 2000);
+            }
+        }
 
-        // ==================== INICIALIZACIÓN ====================
         async function init() {
             await initUser();
 
@@ -281,7 +296,6 @@
             mineBtn.addEventListener('click', mine);
             referBtn.addEventListener('click', copyReferralLink);
 
-            // Actualizar cada 30 segundos
             setInterval(saveToSupabase, 30000);
         }
 
