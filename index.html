@@ -6,229 +6,338 @@
     <title>TRON Miner - Telegram Mini App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- ADSGRAM -->
-    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-    
-    <!-- SUPABASE CLIENT -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
-        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0a0a0a, #1a1a2e); color: white; }
-        .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
-        .mining-btn { transition: all 0.4s ease; }
-        .balance { font-size: 3.2rem; font-weight: 700; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
+            color: white;
+        }
+        
+        .tron-glow {
+            text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff;
+        }
+        
+        .mining-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .mining-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .balance {
+            font-size: 3rem;
+            font-weight: 700;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #00f0ff;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleAnim 1.5s forwards;
+        }
+        
+        @keyframes particleAnim {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0) translateY(-100px); opacity: 0; }
+        }
     </style>
 </head>
 <body class="min-h-screen pb-20">
-    <div class="max-w-md mx-auto bg-black/90 min-h-screen">
+    <div class="max-w-md mx-auto bg-black/80 min-h-screen">
         <!-- Header -->
         <div class="bg-gradient-to-r from-cyan-500 to-blue-600 p-4 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-3xl">₿</div>
+                <div class="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-2xl">₿</div>
                 <div>
                     <h1 class="text-2xl font-bold tron-glow">TRON MINER</h1>
-                    <p class="text-xs text-cyan-100">Reclama + Referidos</p>
+                    <p class="text-xs text-cyan-100">TRX Mining Bot</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-xs opacity-75">Telegram Mini App</div>
+                <div class="flex items-center gap-1 text-xs">
+                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span>En línea</span>
                 </div>
             </div>
         </div>
 
-        <!-- Balance -->
+        <!-- Balance Dashboard -->
         <div class="p-6">
             <div class="bg-zinc-900 rounded-3xl p-8 text-center border border-cyan-500/30">
-                <p class="text-cyan-400 text-sm font-medium">TU BALANCE</p>
-                <div id="balance" class="balance text-white mt-3">0.000</div>
-                <div class="flex items-center justify-center gap-2">
-                    <span class="text-4xl">₮</span><span class="text-2xl text-cyan-300">TRX</span>
+                <p class="text-cyan-400 text-sm font-medium tracking-widest">TU BALANCE</p>
+                <div id="balance" class="balance text-white mt-2">0.000</div>
+                <div class="flex items-center justify-center gap-2 mt-1">
+                    <span class="text-3xl">₮</span>
+                    <span class="text-xl text-cyan-300 font-semibold">TRX</span>
                 </div>
-                <div id="balanceUSD" class="text-emerald-400 text-lg font-medium mt-2">$0.00</div>
             </div>
 
             <!-- Mining Button -->
             <div class="mt-8">
-                <button id="mineBtn" class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center disabled:opacity-50">
-                    <i class="fas fa-bolt text-5xl mb-4"></i>
-                    <span id="mineText">RECLAMAR 0.001 TRX</span>
-                    <span id="countdownText" class="text-sm mt-3 opacity-90 hidden"></span>
+                <button id="mineBtn"
+                        class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center shadow-2xl shadow-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i id="mineIcon" class="fas fa-bolt text-4xl mb-3"></i>
+                    <span id="mineText">MINAR TRX</span>
+                    <span id="cooldownText" class="text-sm mt-2 opacity-75 hidden"></span>
                 </button>
+                <p class="text-center text-xs text-zinc-500 mt-4">Cada clic = <span class="text-emerald-400 font-bold">0.001 TRX</span></p>
             </div>
 
-            <!-- Referral Section -->
-            <div class="mt-8 bg-zinc-900 rounded-3xl p-6">
-                <h3 class="font-semibold text-lg flex items-center gap-2 mb-4">
-                    <i class="fas fa-user-plus"></i> Invita Amigos
-                </h3>
-                <p class="text-sm text-zinc-400 mb-4">Gana el <span class="text-emerald-400 font-bold">15%</span> de las ganancias de tus referidos</p>
+            <!-- Stats -->
+            <div class="grid grid-cols-2 gap-4 mt-8">
+                <div class="bg-zinc-900/70 rounded-2xl p-5">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-xs text-zinc-400">Minados hoy</p>
+                            <div id="todayMined" class="text-2xl font-bold text-emerald-400">0.000</div>
+                        </div>
+                        <i class="fas fa-chart-line text-3xl text-emerald-500"></i>
+                    </div>
+                </div>
                 
-                <div id="referralLinkContainer" class="bg-black rounded-2xl p-4 text-sm break-all mb-4"></div>
-                
-                <button onclick="copyReferralLink()" 
-                        class="w-full bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
-                    <i class="fas fa-copy"></i> COPIAR ENLACE DE REFERIDO
-                </button>
+                <div class="bg-zinc-900/70 rounded-2xl p-5">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-xs text-zinc-400">Total minado</p>
+                            <div id="totalMined" class="text-2xl font-bold">0.000</div>
+                        </div>
+                        <i class="fas fa-coins text-3xl text-amber-400"></i>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="px-6 mt-8 text-center text-xs text-zinc-500">
-            Block ID: 34341 • Supabase Conectado
+        <!-- Withdraw Section -->
+        <div class="px-6 mt-6">
+            <div class="bg-zinc-900 rounded-3xl p-6 border border-amber-400/30">
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-wallet"></i>
+                    Retirar fondos
+                </h3>
+                <div class="mt-4">
+                    <input id="withdrawAddress" 
+                           type="text" 
+                           placeholder="Tu dirección TRON (TRC20)"
+                           class="w-full bg-black border border-zinc-700 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-cyan-400">
+                </div>
+                
+                <button id="withdrawBtn"
+                        class="mt-4 w-full bg-gradient-to-r from-amber-500 to-yellow-600 py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 hover:brightness-110">
+                    <i class="fas fa-arrow-up"></i>
+                    RETIRAR TODO
+                </button>
+                
+                <p class="text-center text-xs text-zinc-500 mt-4">Mínimo de retiro: 1 TRX</p>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div class="px-6 mt-8">
+            <h3 class="font-medium text-zinc-400 mb-3 flex items-center gap-2">
+                <i class="fas fa-history"></i>
+                HISTORIAL RECIENTE
+            </h3>
+            <div id="history" class="space-y-3">
+                <!-- JS populated -->
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-950 border-t border-zinc-800 p-3 text-center text-xs text-zinc-500">
+            Simulador de minería TRON • Solo para demostración
         </div>
     </div>
 
     <script>
-        // ==================== CONFIG ====================
-        const SUPABASE_URL = "https://gmyysxuszqwhsbuglvos.supabase.co/rest/v1/";
-        const SUPABASE_KEY = "sb_publishable_W6B7ioMCXuXtlwNpbA_8Eg_YR-21p8O";
-        
-        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
-        const BLOCK_ID = "34341";
-        let AdController;
-        try { AdController = window.Adsgram.init({ blockId: BLOCK_ID }); } catch(e) {}
+        // Variables
+        let balance = parseFloat(localStorage.getItem('tronBalance')) || 0;
+        let totalMined = parseFloat(localStorage.getItem('totalMined')) || 0;
+        let lastMineTime = parseInt(localStorage.getItem('lastMineTime')) || 0;
+        let history = JSON.parse(localStorage.getItem('mineHistory')) || [];
 
-        const REWARD = 0.001;
-        const COMMISSION_RATE = 0.15; // 15%
-        const COOLDOWN = 3 * 60 * 1000;
-
-        let userId = null;
-        let referrerId = null;
-        let balance = 0;
-        let totalMined = 0;
-        let lastClaimTime = 0;
-        let trxPrice = 0;
+        const COOLDOWN = 3 * 60 * 1000; // 3 minutos en milisegundos
 
         // Elementos
+        const balanceEl = document.getElementById('balance');
+        const todayMinedEl = document.getElementById('todayMined');
+        const totalMinedEl = document.getElementById('totalMined');
         const mineBtn = document.getElementById('mineBtn');
         const mineText = document.getElementById('mineText');
-        const countdownText = document.getElementById('countdownText');
-        const balanceEl = document.getElementById('balance');
-        const balanceUSDEl = document.getElementById('balanceUSD');
-        const referralLinkContainer = document.getElementById('referralLinkContainer');
+        const cooldownText = document.getElementById('cooldownText');
+        const historyEl = document.getElementById('history');
+        const withdrawBtn = document.getElementById('withdrawBtn');
 
-        // Obtener datos de Telegram
-        function getTelegramUser() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                const initData = window.Telegram.WebApp.initDataUnsafe;
-                userId = initData.user ? initData.user.id : null;
-                
-                // Obtener referrer desde start_param (si viene por enlace de referido)
-                const startParam = window.Telegram.WebApp.startParam;
-                if (startParam) referrerId = parseInt(startParam);
-            }
-        }
-
-        async function registerOrUpdateUser() {
-            if (!userId) return;
-            
-            const { data, error } = await supabase
-                .from('users')
-                .upsert({
-                    telegram_id: userId,
-                    referrer_id: referrerId || null,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'telegram_id' });
-        }
-
-        async function loadUserData() {
-            if (!userId) return;
-            
-            const { data } = await supabase
-                .from('users')
-                .select('balance, total_mined, last_claim_time')
-                .eq('telegram_id', userId)
-                .single();
-            
-            if (data) {
-                balance = data.balance || 0;
-                totalMined = data.total_mined || 0;
-                lastClaimTime = data.last_claim_time ? new Date(data.last_claim_time).getTime() : 0;
-            }
-            updateUI();
-        }
-
+        // Actualizar UI
         function updateUI() {
             balanceEl.textContent = balance.toFixed(3);
-            if (trxPrice > 0) {
-                balanceUSDEl.textContent = `≈ $${(balance * trxPrice).toFixed(2)}`;
+            totalMinedEl.textContent = totalMined.toFixed(3);
+            
+            // Hoy minado (simplificado)
+            todayMinedEl.textContent = (balance * 0.7).toFixed(3);
+            
+            renderHistory();
+        }
+
+        // Renderizar historial
+        function renderHistory() {
+            historyEl.innerHTML = '';
+            if (history.length === 0) {
+                historyEl.innerHTML = `<p class="text-zinc-500 text-center py-6">Aún no has minado nada</p>`;
+                return;
             }
-        }
-
-        function generateReferralLink() {
-            if (!userId) return "https://t.me/TuBot?start=ERROR";
-            return `https://t.me/TuBot?start=${userId}`;   // Cambia "TuBot" por el username real de tu bot
-        }
-
-        function copyReferralLink() {
-            const link = generateReferralLink();
-            navigator.clipboard.writeText(link).then(() => {
-                alert("✅ Enlace de referido copiado!\nCompártelo con tus amigos");
+            
+            history.slice(0, 5).forEach(entry => {
+                const div = document.createElement('div');
+                div.className = "bg-zinc-900 rounded-2xl p-4 flex justify-between items-center";
+                div.innerHTML = `
+                    <div>
+                        <div class="text-emerald-400 text-sm">+${entry.amount} TRX</div>
+                        <div class="text-xs text-zinc-500">${entry.time}</div>
+                    </div>
+                    <div class="text-green-400">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                `;
+                historyEl.appendChild(div);
             });
         }
 
-        async function claimReward() {
-            const now = Date.now();
-            if (now - lastClaimTime < COOLDOWN) return;
-
-            mineText.textContent = "CARGANDO ANUNCIO...";
-            mineBtn.disabled = true;
-
-            try {
-                if (AdController) await AdController.show();
-            } catch (e) { console.log("Ad skipped"); }
-
-            // Dar recompensa principal
-            balance += REWARD;
-            totalMined += REWARD;
-            lastClaimTime = now;
-
-            // Guardar en Supabase
-            await supabase
-                .from('users')
-                .update({
-                    balance: balance,
-                    total_mined: totalMined,
-                    last_claim_time: new Date().toISOString()
-                })
-                .eq('telegram_id', userId);
-
-            // Dar comisión al referrer si existe
-            if (referrerId) {
-                await supabase.rpc('add_commission', {
-                    ref_id: referrerId,
-                    amount: REWARD * COMMISSION_RATE
-                });
+        // Crear partículas al minar
+        function createParticles(count) {
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                const x = Math.random() * window.innerWidth;
+                particle.style.left = `${x}px`;
+                particle.style.top = `${window.innerHeight * 0.4}px`;
+                
+                const hue = Math.random() * 30 + 180;
+                particle.style.background = `hsl(${hue}, 100%, 70%)`;
+                
+                document.body.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 2000);
             }
-
-            updateUI();
-            createParticles(30);
-
-            mineText.textContent = "+0.001 TRX!";
-            setTimeout(() => {
-                mineText.textContent = "RECLAMAR 0.001 TRX";
-                startCountdown();
-            }, 1500);
         }
 
-        function startCountdown() { /* ... mismo código anterior ... */ }
-
-        function createParticles() { /* ... mismo código anterior ... */ }
-
-        async function init() {
-            getTelegramUser();
-            if (!userId) {
-                alert("Error: No se pudo obtener tu ID de Telegram");
+        // Minar
+        function mine() {
+            const now = Date.now();
+            
+            if (now - lastMineTime < COOLDOWN) {
+                const remaining = Math.ceil((COOLDOWN - (now - lastMineTime)) / 1000);
+                showCooldown(remaining);
                 return;
             }
-
-            await registerOrUpdateUser();
-            await loadUserData();
-
-            // Mostrar enlace de referido
-            referralLinkContainer.textContent = generateReferralLink();
-
-            // Eventos
-            mineBtn.addEventListener('click', claimReward);
+            
+            // Recompensa
+            const reward = 0.001;
+            balance += reward;
+            totalMined += reward;
+            lastMineTime = now;
+            
+            // Guardar en localStorage
+            localStorage.setItem('tronBalance', balance);
+            localStorage.setItem('totalMined', totalMined);
+            localStorage.setItem('lastMineTime', lastMineTime);
+            
+            // Agregar al historial
+            const timeStr = new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
+            history.unshift({
+                amount: reward,
+                time: timeStr
+            });
+            
+            if (history.length > 20) history.pop();
+            localStorage.setItem('mineHistory', JSON.stringify(history));
+            
+            // Actualizar UI
+            updateUI();
+            
+            // Efectos
+            mineBtn.classList.add('!bg-emerald-500');
+            setTimeout(() => mineBtn.classList.remove('!bg-emerald-500'), 600);
+            
+            createParticles(25);
+            
+            // Feedback
+            const originalText = mineText.textContent;
+            mineText.textContent = '+0.001 TRX!';
+            setTimeout(() => {
+                mineText.textContent = originalText;
+            }, 1200);
         }
 
+        // Mostrar cooldown
+        function showCooldown(seconds) {
+            mineBtn.disabled = true;
+            cooldownText.classList.remove('hidden');
+            
+            const interval = setInterval(() => {
+                seconds--;
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    mineBtn.disabled = false;
+                    cooldownText.classList.add('hidden');
+                    mineText.textContent = "MINAR TRX";
+                    return;
+                }
+                const min = Math.floor(seconds / 60);
+                const sec = seconds % 60;
+                cooldownText.textContent = `Disponible en ${min}:${sec < 10 ? '0' : ''}${sec}`;
+            }, 1000);
+        }
+
+        // Retirar (simulado)
+        function withdraw() {
+            if (balance < 1) {
+                alert("❌ Mínimo de retiro: 1 TRX");
+                return;
+            }
+            
+            const address = document.getElementById('withdrawAddress').value.trim();
+            if (!address || address.length < 30) {
+                alert("❌ Ingresa una dirección TRON válida");
+                return;
+            }
+            
+            if (confirm(`¿Retirar ${balance.toFixed(3)} TRX a ${address}?`)) {
+                alert(`✅ Retiro solicitado!\n\n${balance.toFixed(3)} TRX enviados a:\n${address}\n\n(Tiempo estimado: 1-5 minutos)`);
+                
+                // Reset para simulación
+                balance = 0;
+                localStorage.setItem('tronBalance', balance);
+                updateUI();
+            }
+        }
+
+        // Inicialización
+        function init() {
+            updateUI();
+            
+            // Verificar cooldown al cargar
+            const now = Date.now();
+            if (now - lastMineTime < COOLDOWN) {
+                const remainingSeconds = Math.ceil((COOLDOWN - (now - lastMineTime)) / 1000);
+                showCooldown(remainingSeconds);
+            }
+            
+            // Eventos
+            mineBtn.addEventListener('click', mine);
+            withdrawBtn.addEventListener('click', withdraw);
+            
+            // Tailwind script ya cargado
+        }
+
+        // Iniciar
         window.onload = init;
     </script>
 </body>
