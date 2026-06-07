@@ -7,16 +7,29 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0a0a0a, #1a1a2e); color: white; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e); 
+            color: white; 
+        }
         .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
         .mining-btn { transition: all 0.3s ease; }
         .mining-btn:active { transform: scale(0.95); }
         .balance { font-size: 3rem; font-weight: 700; }
-        .particle { position: absolute; width: 6px; height: 6px; background: #00f0ff; border-radius: 50%; pointer-events: none; animation: particleAnim 1.5s forwards; }
-        @keyframes particleAnim { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0) translateY(-100px); opacity: 0; } }
+        .particle { 
+            position: absolute; 
+            width: 6px; height: 6px; 
+            background: #00f0ff; 
+            border-radius: 50%; 
+            pointer-events: none; 
+            animation: particleAnim 1.5s forwards; 
+        }
+        @keyframes particleAnim { 
+            0% { transform: scale(1); opacity: 1; } 
+            100% { transform: scale(0) translateY(-100px); opacity: 0; } 
+        }
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -53,8 +66,8 @@
             <!-- Mining Button -->
             <div class="mt-8">
                 <button id="mineBtn" class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xl py-8 rounded-3xl flex flex-col items-center justify-center shadow-2xl shadow-cyan-500/50 disabled:opacity-50">
-                    <i class="fas fa-bolt text-4xl mb-3"></i>
-                    <span id="mineText">VER ANUNCIO Y MINAR TRX</span>
+                    <i id="mineIcon" class="fas fa-bolt text-4xl mb-3"></i>
+                    <span id="mineText">RECLAMAR TRX</span>
                     <span id="cooldownText" class="text-sm mt-2 opacity-75 hidden"></span>
                 </button>
                 <p class="text-center text-xs text-zinc-500 mt-4">Ver anuncio = <span class="text-emerald-400 font-bold">0.001 TRX</span></p>
@@ -117,30 +130,33 @@
     <script>
         const SUPABASE_URL = "https://gmyysxuszqwhsbuglvos.supabase.co/rest/v1/";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdteXlzeHVzenF3aHNidWdsdm9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODExOTQsImV4cCI6MjA5NjM1NzE5NH0.C-1TCD8BG-GJtJl6hxJGmo60rqyNee4Q_bsEebRIveQ";
-
+        
         let currentUser = null;
         let telegramUserId = null;
         const BOT_USERNAME = "generartrx2026bot";
-
+        
         let balance = 0;
         let totalMined = 0;
         let lastMineTime = 0;
         let commissions = [];
+        
         const COOLDOWN = 3 * 60 * 1000; // 3 minutos
+        
         let AdController = null;
-
+        
         const balanceEl = document.getElementById('balance');
         const totalMinedEl = document.getElementById('totalMined');
         const todayMinedEl = document.getElementById('todayMined');
         const mineBtn = document.getElementById('mineBtn');
         const mineText = document.getElementById('mineText');
         const cooldownText = document.getElementById('cooldownText');
-        const referBtn = document.getElementById('referBtn');
+        const mineIcon = document.getElementById('mineIcon');
 
         async function supabaseRequest(endpoint, method = "GET", body = null) {
             try {
                 const res = await fetch(SUPABASE_URL + endpoint, {
-                    method, headers: {
+                    method,
+                    headers: {
                         "apikey": SUPABASE_ANON_KEY,
                         "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
                         "Content-Type": "application/json",
@@ -148,12 +164,15 @@
                     },
                     body: body ? JSON.stringify(body) : null
                 });
+                if (!res.ok) throw new Error('Error en Supabase');
                 return await res.json();
-            } catch (e) { console.error(e); return []; }
+            } catch (e) {
+                console.error(e);
+                return [];
+            }
         }
 
-        async function initUser() { /* ... mismo que antes ... */ 
-            // (Mantengo la función initUser original)
+        async function initUser() {
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.ready();
                 const user = window.Telegram.WebApp.initDataUnsafe.user;
@@ -161,31 +180,51 @@
                 if (user) telegramUserId = user.id;
 
                 let referredBy = null;
-                if (startParam && startParam.startsWith('ref_')) referredBy = parseInt(startParam.replace('ref_', ''));
+                if (startParam && startParam.startsWith('ref_')) {
+                    referredBy = parseInt(startParam.replace('ref_', ''));
+                }
             }
-            if (!telegramUserId) telegramUserId = 123456789;
+
+            if (!telegramUserId) telegramUserId = 123456789; // fallback
 
             let users = await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`);
             if (users && users.length > 0) {
                 currentUser = users[0];
             } else {
-                const newUser = { telegram_id: telegramUserId, username: `user_${telegramUserId}`, balance: 0, total_mined: 0, referrals_count: 0, referred_by: referredBy };
+                const newUser = { 
+                    telegram_id: telegramUserId, 
+                    username: `user_${telegramUserId}`, 
+                    balance: 0, 
+                    total_mined: 0, 
+                    referrals_count: 0, 
+                    referred_by: referredBy 
+                };
                 const created = await supabaseRequest("users", "POST", newUser);
                 currentUser = created[0] || newUser;
             }
+
             balance = currentUser.balance || 0;
             totalMined = currentUser.total_mined || 0;
             updateUI();
         }
 
+        function getReferralLink() {
+            return `https://t.me/${BOT_USERNAME}?start=ref_${telegramUserId}`;
+        }
+
+        function copyReferralLink() {
+            navigator.clipboard.writeText(getReferralLink()).then(() => {
+                alert("✅ Enlace copiado!");
+            });
+        }
+
         async function giveReferralBonus(referrerId, amount) {
             if (!referrerId) return;
             const bonus = parseFloat((amount * 0.15).toFixed(5));
-            await supabaseRequest(`users?telegram_id=eq.${referrerId}`, "PATCH", { balance: `balance + ${bonus}`, total_mined: `total_mined + ${bonus}` });
-
-            commissions.unshift({ amount: bonus, from: "Un referido", time: new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'}) });
-            if (commissions.length > 15) commissions.shift();
-            localStorage.setItem('commissions', JSON.stringify(commissions));
+            await supabaseRequest(`users?telegram_id=eq.${referrerId}`, "PATCH", { 
+                balance: `balance + ${bonus}`, 
+                total_mined: `total_mined + ${bonus}` 
+            });
         }
 
         async function saveToSupabase() {
@@ -196,93 +235,32 @@
             });
         }
 
-        function getReferralLink() { return `https://t.me/${BOT_USERNAME}?start=ref_${telegramUserId}`; }
-        function copyReferralLink() {
-            navigator.clipboard.writeText(getReferralLink()).then(() => alert("✅ Enlace copiado!"));
-        }
-
-        // ====================== FUNCIÓN PRINCIPAL MINAR ======================
-        async function mine() {
-            const now = Date.now();
-            if (now - lastMineTime < COOLDOWN) {
-                const remaining = Math.ceil((COOLDOWN - (now - lastMineTime)) / 1000);
-                showCooldown(remaining);
-                return;
-            }
-
-            if (!AdController) {
-                alert("AdsGram no está cargado. Recarga la página.");
-                return;
-            }
-
-            mineText.textContent = "Cargando anuncio...";
-            mineBtn.disabled = true;
-
-            try {
-                await AdController.show();
-
-                const reward = 0.001;
-                balance += reward;
-                totalMined += reward;
-                lastMineTime = now;   // ← Reinicia el cooldown aquí
-
-                if (currentUser && currentUser.referred_by) {
-                    await giveReferralBonus(currentUser.referred_by, reward);
-                }
-
-                await saveToSupabase();
-                updateUI();
-                createParticles(30);
-
-                mineText.textContent = '+0.001 TRX!';
-                setTimeout(() => mineText.textContent = "VER ANUNCIO Y MINAR TRX", 1800);
-
-            } catch (error) {
-                console.error(error);
-                mineText.textContent = "Anuncio cancelado";
-                setTimeout(() => mineText.textContent = "VER ANUNCIO Y MINAR TRX", 2000);
-            } finally {
-                mineBtn.disabled = false;
-            }
-        }
-
-        function showCooldown(seconds) {
-            mineBtn.disabled = true;
-            cooldownText.classList.remove('hidden');
-            const interval = setInterval(() => {
-                seconds--;
-                if (seconds <= 0) {
-                    clearInterval(interval);
-                    mineBtn.disabled = false;
-                    cooldownText.classList.add('hidden');
-                    return;
-                }
-                const min = Math.floor(seconds / 60);
-                const sec = seconds % 60;
-                cooldownText.textContent = `Disponible en ${min}:${sec < 10 ? '0' : ''}${sec}`;
-            }, 1000);
-        }
-
         function updateUI() {
             balanceEl.textContent = balance.toFixed(3);
             totalMinedEl.textContent = totalMined.toFixed(3);
-            todayMinedEl.textContent = (balance * 0.7).toFixed(3);
+            todayMinedEl.textContent = (balance * 0.7).toFixed(3); // aproximación
             document.getElementById('referralLink').textContent = getReferralLink();
             renderCommissionHistory();
         }
 
         function renderCommissionHistory() {
             const container = document.getElementById('commissionHistory');
-            container.innerHTML = commissions.length === 0 
-                ? `<p class="text-zinc-500 text-center py-6">Aún no tienes comisiones</p>` 
-                : commissions.map(item => `
-                    <div class="bg-zinc-800 rounded-xl p-3 flex justify-between items-center text-sm">
-                        <div><span class="text-emerald-400">+${item.amount} TRX</span><div class="text-xs text-zinc-500">${item.from} • ${item.time}</div></div>
-                        <i class="fas fa-check-circle text-emerald-400"></i>
-                    </div>`).join('');
+            if (commissions.length === 0) {
+                container.innerHTML = `<p class="text-zinc-500 text-center py-6">Aún no tienes comisiones</p>`;
+                return;
+            }
+            container.innerHTML = commissions.map(item => `
+                <div class="bg-zinc-800 rounded-xl p-3 flex justify-between items-center text-sm">
+                    <div>
+                        <span class="text-emerald-400">+${item.amount} TRX</span>
+                        <div class="text-xs text-zinc-500">${item.from} • ${item.time}</div>
+                    </div>
+                    <i class="fas fa-check-circle text-emerald-400"></i>
+                </div>
+            `).join('');
         }
 
-        function createParticles(count) { /* mismo código de partículas */ 
+        function createParticles(count) {
             for (let i = 0; i < count; i++) {
                 const p = document.createElement('div');
                 p.className = 'particle';
@@ -294,20 +272,116 @@
             }
         }
 
+        function startCooldown() {
+            lastMineTime = Date.now();
+            localStorage.setItem('lastMineTime', lastMineTime);
+            showCooldown();
+        }
+
+        function showCooldown() {
+            const remaining = Math.ceil((COOLDOWN - (Date.now() - lastMineTime)) / 1000);
+            if (remaining <= 0) {
+                cooldownText.classList.add('hidden');
+                mineBtn.disabled = false;
+                return;
+            }
+
+            mineBtn.disabled = true;
+            cooldownText.classList.remove('hidden');
+            mineText.textContent = "Espera el cooldown";
+
+            const interval = setInterval(() => {
+                const timeLeft = Math.ceil((COOLDOWN - (Date.now() - lastMineTime)) / 1000);
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    cooldownText.classList.add('hidden');
+                    mineBtn.disabled = false;
+                    mineText.textContent = "VER ANUNCIO Y MINAR TRX";
+                    return;
+                }
+                const min = Math.floor(timeLeft / 60);
+                const sec = timeLeft % 60;
+                cooldownText.textContent = `Disponible en ${min}:${sec < 10 ? '0' : ''}${sec}`;
+            }, 1000);
+        }
+
+        async function mine() {
+            const now = Date.now();
+            if (now - lastMineTime < COOLDOWN) {
+                showCooldown();
+                return;
+            }
+
+            if (!AdController) {
+                alert("❌ AdsGram no está disponible. Intenta recargar.");
+                return;
+            }
+
+            mineBtn.disabled = true;
+            mineText.textContent = "Cargando anuncio...";
+            mineIcon.classList.add('fa-spin');
+
+            try {
+                await AdController.show();
+                
+                // === ÉXITO ===
+                const reward = 0.001;
+                balance += reward;
+                totalMined += reward;
+
+                startCooldown(); // Reinicia cooldown
+
+                if (currentUser && currentUser.referred_by) {
+                    await giveReferralBonus(currentUser.referred_by, reward);
+                }
+
+                await saveToSupabase();
+                updateUI();
+                createParticles(30);
+
+                mineText.textContent = '+0.001 TRX!';
+                setTimeout(() => {
+                    mineText.textContent = "VER ANUNCIO Y MINAR TRX";
+                }, 2000);
+
+            } catch (error) {
+                console.error(error);
+                mineText.textContent = "Anuncio cancelado o fallido";
+                setTimeout(() => {
+                    mineText.textContent = "VER ANUNCIO Y MINAR TRX";
+                }, 2000);
+            } finally {
+                mineIcon.classList.remove('fa-spin');
+                mineBtn.disabled = false;
+            }
+        }
+
         async function init() {
             await initUser();
 
-            AdController = window.Adsgram.init({ blockId: "34341", debug: true });
+            // Inicializar AdsGram
+            try {
+                AdController = window.Adsgram.init({ 
+                    blockId: "34341", 
+                    debug: true 
+                });
+            } catch (e) {
+                console.error("Error al inicializar AdsGram:", e);
+            }
+
+            // Cargar cooldown guardado
+            const savedTime = localStorage.getItem('lastMineTime');
+            if (savedTime) lastMineTime = parseInt(savedTime);
 
             commissions = JSON.parse(localStorage.getItem('commissions')) || [];
 
-            const now = Date.now();
-            if (now - lastMineTime < COOLDOWN) {
-                showCooldown(Math.ceil((COOLDOWN - (now - lastMineTime)) / 1000));
+            // Mostrar cooldown si está activo
+            if (Date.now() - lastMineTime < COOLDOWN) {
+                showCooldown();
             }
 
             mineBtn.addEventListener('click', mine);
-            referBtn.addEventListener('click', copyReferralLink);
+            // referBtn ya tiene onclick en HTML
 
             setInterval(saveToSupabase, 30000);
         }
