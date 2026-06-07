@@ -354,9 +354,42 @@ if (referredBy) {
                 mineIcon.classList.remove('fa-spin');
             }
         }
+async function loadCommissionHistory() {
 
+    const history = await supabaseRequest(
+        `referral_commissions?referrer_id=eq.${telegramUserId}&order=created_at.desc`
+    );
+
+    const container = document.getElementById('commissionHistory');
+
+    if (!history.length) {
+        container.innerHTML =
+            '<p class="text-zinc-500 text-sm">Sin comisiones aún</p>';
+        return;
+    }
+
+    container.innerHTML = history.map(item => `
+        <div class="bg-black/40 rounded-xl p-3 flex justify-between items-center">
+            <div>
+                <div class="text-sm text-cyan-300">
+                    Usuario ${item.referred_user_id}
+                </div>
+
+                <div class="text-xs text-zinc-500">
+                    ${new Date(item.created_at).toLocaleString()}
+                </div>
+            </div>
+
+            <div class="text-emerald-400 font-bold">
+                +${Number(item.amount).toFixed(5)} TRX
+            </div>
+        </div>
+    `).join('');
+}
         async function init() {
             await initUser();
+            
+            await loadCommissionHistory();
 
             AdController = window.Adsgram.init({ blockId: "34341", debug: true });
 
