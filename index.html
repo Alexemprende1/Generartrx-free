@@ -6,6 +6,10 @@
     <title>TRON Miner - Telegram Mini App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- ADSGRAM SDK -->
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -93,11 +97,23 @@
         </div>
 
         <div class="px-6 mt-8 text-center text-xs text-zinc-500">
-            Precio en tiempo real vía CoinGecko • Cada clic = 0.001 TRX
+            AdsGram Monetización Activa • Block ID: 34341
         </div>
     </div>
 
     <script>
+        // ==================== ADSGRAM CONFIG ====================
+        const BLOCK_ID = "34341";   // Tu Block ID ya integrado
+
+        let AdController;
+        try {
+            AdController = window.Adsgram.init({ blockId: BLOCK_ID });
+            console.log("AdsGram inicializado correctamente - Block ID:", BLOCK_ID);
+        } catch (e) {
+            console.error("Error al inicializar AdsGram", e);
+        }
+        // =======================================================
+
         let balance = parseFloat(localStorage.getItem('tronBalance')) || 0;
         let totalMined = parseFloat(localStorage.getItem('totalMined')) || 0;
         let lastClaimTime = parseInt(localStorage.getItem('lastClaimTime')) || 0;
@@ -123,10 +139,8 @@
             totalMinedEl.textContent = totalMined.toFixed(3);
             
             if (trxPrice > 0) {
-                const usdBalance = (balance * trxPrice).toFixed(2);
-                const usdTotal = (totalMined * trxPrice).toFixed(2);
-                balanceUSDEl.textContent = `≈ $${usdBalance}`;
-                totalUSDEl.textContent = `$${usdTotal}`;
+                balanceUSDEl.textContent = `≈ $${(balance * trxPrice).toFixed(2)}`;
+                totalUSDEl.textContent = `$${(totalMined * trxPrice).toFixed(2)}`;
             }
         }
 
@@ -135,11 +149,9 @@
                 const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tron&vs_currencies=usd');
                 const data = await res.json();
                 trxPrice = data.tron.usd;
-                
                 priceEl.textContent = `$${trxPrice.toFixed(4)}`;
                 updateUI();
             } catch (e) {
-                console.error("Error fetching price", e);
                 priceEl.textContent = "$0.32";
             }
         }
@@ -178,13 +190,32 @@
             countdownInterval = setInterval(updateTimer, 1000);
         }
 
-        function claimReward() {
+        async function claimReward() {
             const now = Date.now();
             if (now - lastClaimTime < COOLDOWN) return;
 
+            mineText.textContent = "CARGANDO ANUNCIO...";
+            mineBtn.disabled = true;
+
+            try {
+                if (AdController) {
+                    const result = await AdController.show();
+                    // Recompensa después de ver el anuncio
+                    giveReward();
+                } else {
+                    giveReward();
+                }
+            } catch (error) {
+                console.log("Error o anuncio saltado:", error);
+                // Aún así damos la recompensa (comportamiento común en rewarded ads)
+                giveReward();
+            }
+        }
+
+        function giveReward() {
             balance += REWARD;
             totalMined += REWARD;
-            lastClaimTime = now;
+            lastClaimTime = Date.now();
 
             localStorage.setItem('tronBalance', balance);
             localStorage.setItem('totalMined', totalMined);
@@ -213,7 +244,7 @@
                 alert("❌ Ingresa una dirección TRON válida");
                 return;
             }
-            if (confirm(`¿Retirar ${balance.toFixed(3)} TRX (≈ $${(balance * trxPrice).toFixed(2)})?`)) {
+            if (confirm(`¿Retirar ${balance.toFixed(3)} TRX?`)) {
                 alert(`✅ ¡Retiro solicitado exitosamente!`);
                 balance = 0;
                 localStorage.setItem('tronBalance', balance);
@@ -224,11 +255,8 @@
         function init() {
             updateUI();
             fetchTRXPrice();
-
-            // Actualizar precio cada 60 segundos
             setInterval(fetchTRXPrice, 60000);
 
-            // Restaurar cooldown
             const now = Date.now();
             if (now - lastClaimTime < COOLDOWN) {
                 startCountdown();
