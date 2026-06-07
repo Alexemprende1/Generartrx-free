@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TRON Miner - Telegram Mini App</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></link>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
@@ -81,11 +81,11 @@
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-zinc-900/70 rounded-2xl p-5 border border-zinc-800">
                     <p class="text-xs text-zinc-400">Minados hoy</p>
-                    <div id="todayMined" class="text-xl font-bold text-emerald-400 mt-1">0.000</div>
+                    <div id="todayMined" class="text-xl font-bold text-emerald-400 mt-1">0.00000</div>
                 </div>
                 <div class="bg-zinc-900/70 rounded-2xl p-5 border border-zinc-800">
                     <p class="text-xs text-zinc-400">Total minado</p>
-                    <div id="totalMined" class="text-xl font-bold mt-1">0.000</div>
+                    <div id="totalMined" class="text-xl font-bold mt-1">0.00000</div>
                 </div>
             </div>
 
@@ -204,6 +204,8 @@
                 const created = await supabaseRequest("users", "POST", newUser);
                 if (created && created.length > 0) {
                     currentUser = created[0];
+                } else {
+                    currentUser = newUser;
                 }
 
                 // Incrementar contador del que invitó
@@ -243,7 +245,7 @@
         function updateUI() {
             balanceEl.textContent = balance.toFixed(5);
             totalMinedEl.textContent = totalMined.toFixed(5);
-            todayMinedEl.textContent = (totalMined * 0.4).toFixed(5); // Ajustado para simular minado diario coherente
+            todayMinedEl.textContent = (totalMined * 0.4).toFixed(5); 
             document.getElementById('referralLink').textContent = getReferralLink() || "Generando...";
         }
 
@@ -265,7 +267,7 @@
                 timerEl.className = "timer text-emerald-400 animate-pulse";
                 timerStatus.textContent = "¡Listo para reclamar!";
                 mineBtn.disabled = false;
-                mineText.textContent = "RECLAMAR TRX";
+                mineText.textContent = "VER ANUNCIO Y RECLAMAR";
                 return;
             }
 
@@ -292,7 +294,7 @@
             mineIcon.classList.add('fa-spin');
 
             try {
-                // Ejecución del anuncio AdsGram
+                // Ejecución del anuncio AdsGram con el nuevo ID 34461
                 await AdController.show();
 
                 const reward = 0.001;
@@ -301,7 +303,7 @@
                 lastMineTime = Date.now();
                 localStorage.setItem('lastMineTime', lastMineTime);
 
-                // SISTEMA DE COMISIÓN DE REFERIDOS (Corregido de 'invited_by' a 'referred_by')
+                // SISTEMA DE COMISIÓN DE REFERIDOS (referred_by)
                 if (currentUser && currentUser.referred_by) {
                     const referrerId = currentUser.referred_by;
                     const commission = reward * 0.15;
@@ -325,7 +327,7 @@
                     }
                 }
 
-                // Guardar datos del usuario actual
+                // Guardar datos del usuario actual de manera persistente
                 await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
                     balance: parseFloat(balance.toFixed(5)),
                     total_mined: parseFloat(totalMined.toFixed(5))
@@ -375,7 +377,7 @@
             // Cargar historial
             await loadCommissionHistory();
 
-            // Inicializar AdsGram correctamente
+            // Inicializar AdsGram correctamente con el nuevo Block ID asignado (34461)
             if (window.Adsgram) {
                 AdController = window.Adsgram.init({ blockId: "34461", debug: false });
             } else {
