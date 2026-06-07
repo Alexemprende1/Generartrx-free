@@ -297,9 +297,42 @@ if (referredBy) {
                 lastMineTime = Date.now();
                 localStorage.setItem('lastMineTime', lastMineTime);
 
-                if (currentUser?.referred_by) {
-                    // giveReferralBonus...
-                }
+               if (currentUser?.invited_by) {
+
+    const commission = reward * 0.15;
+
+    // Buscar referidor
+    const refUsers = await supabaseRequest(
+        `users?telegram_id=eq.${currentUser.invited_by}`
+    );
+
+    if (refUsers.length > 0) {
+
+        const refUser = refUsers[0];
+
+        // Actualizar balance del referidor
+        await supabaseRequest(
+            `users?telegram_id=eq.${currentUser.invited_by}`,
+            "PATCH",
+            {
+                balance: parseFloat(
+                    ((refUser.balance || 0) + commission).toFixed(5)
+                )
+            }
+        );
+
+        // Guardar historial
+        await supabaseRequest(
+            "referral_commissions",
+            "POST",
+            {
+                referrer_id: currentUser.invited_by,
+                referred_user_id: telegramUserId,
+                amount: commission
+            }
+        );
+    }
+}
 
                 await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
                     balance: parseFloat(balance.toFixed(5)),
