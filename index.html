@@ -175,7 +175,10 @@
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.ready();
                 const user = window.Telegram.WebApp.initDataUnsafe.user;
-             if (startParam && startParam.startsWith("ref_")) {
+             if (referredBy == telegramUserId) {
+    referredBy = null;
+}
+                if (startParam && startParam.startsWith("ref_")) {
     referredBy = startParam.replace("ref_", "");
 }
 
