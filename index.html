@@ -175,27 +175,63 @@
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.ready();
                 const user = window.Telegram.WebApp.initDataUnsafe.user;
-                if (user) telegramUserId = user.id;
-            }
+             if (startParam && startParam.startsWith("ref_")) {
+    referredBy = startParam.replace("ref_", "");
+}
+
+if (referredBy == telegramUserId) {
+    referredBy = null;
+}
+
+// Leer parámetro start del bot
+const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+
+if (startParam && startParam.startsWith("ref_")) {
+    referredBy = startParam.replace("ref_", "");
+}
             if (!telegramUserId) telegramUserId = 123456789;
 
             let users = await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`);
             if (users && users.length > 0) {
                 currentUser = users[0];
             } else {
-                const newUser = { telegram_id: telegramUserId, username: `user_${telegramUserId}`, balance: 0, total_mined: 0, referrals_count: 0 };
+const newUser = {
+    telegram_id: telegramUserId,
+    username: `user_${telegramUserId}`,
+    balance: 0,
+    total_mined: 0,
+    referrals_count: 0,
+    referred_by: referredBy
+};
                 const created = await supabaseRequest("users", "POST", newUser);
-                currentUser = created[0] || newUser;
-            }
+               // Incrementar contador del referidor
+if (referredBy) {
+    const refUsers = await supabaseRequest(
+        `users?telegram_id=eq.${referredBy}`
+    );
 
+    if (refUsers.length > 0) {
+        const refUser = refUsers[0];
+
+        await supabaseRequest(
+            `users?telegram_id=eq.${referredBy}`,
+            "PATCH",
+            {
+                referrals_count: (refUser.referrals_count || 0) + 1
+            }
+        );
+    }
+}
             balance = currentUser.balance || 0;
             totalMined = currentUser.total_mined || 0;
             updateUI();
         }
 
         function getReferralLink() {
-            return `https://t.me/${BOT_USERNAME}?start=ref_${telegramUserId}`;
-        }
+    if (!telegramUserId) return "";
+
+    return `https://t.me/${BOT_USERNAME}?start=ref_${telegramUserId}`;
+}
 
         function copyReferralLink() {
             navigator.clipboard.writeText(getReferralLink()).then(() => alert("✅ Enlace copiado!"));
