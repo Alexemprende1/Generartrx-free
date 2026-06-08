@@ -9,174 +9,421 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: #07070c; 
+            font-family: 'Inter', sans-serif; 
+            background: #0a0a0a; 
             color: white; 
-            -webkit-tap-highlight-color: transparent;
         }
-        .glow-cyan { text-shadow: 0 0 20px rgba(6, 182, 212, 0.6); }
-        .glow-card { box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05); }
-        .mining-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .mining-btn:active { transform: scale(0.97); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease-out; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
+        .mining-btn { transition: all 0.3s ease; }
+        .mining-btn:active { transform: scale(0.95); }
+        .balance { font-size: 3rem; font-weight: 700; }
+        .timer { font-size: 2.2rem; font-weight: 700; letter-spacing: 2px; }
         .particle { 
             position: absolute; width: 6px; height: 6px; 
-            background: #06b6d4; border-radius: 50%; 
-            pointer-events: none; animation: particleAnim 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; 
+            background: #00f0ff; border-radius: 50%; 
+            pointer-events: none; animation: particleAnim 1.5s forwards; 
         }
         @keyframes particleAnim { 
             0% { transform: scale(1); opacity: 1; } 
-            100% { transform: scale(0) translateY(-120px) translateX(var(--md-x, 0px)); opacity: 0; } 
+            100% { transform: scale(0) translateY(-100px); opacity: 0; } 
+        }
+
+        /* Nuevos estilos de navegación */
+        .app-screen {
+            min-height: calc(100vh - 150px);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: #71717a;
+            font-size: 11px;
+            transition: all 0.25s ease;
+        }
+
+        .nav-btn i {
+            font-size: 20px;
+        }
+
+        .nav-btn.active {
+            color: #06b6d4;
+        }
+
+        .nav-btn.active i {
+            transform: translateY(-2px);
+        }
+
+        .nav-btn:active {
+            transform: scale(0.96);
+        }
+
+        input::placeholder {
+            color: #71717a;
+        }
+
+        /* Estilo css para la Ruleta */
+        .wheel-container {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            margin: 0 auto;
+            border-radius: 50%;
+            border: 8px solid #1e293b;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+            overflow: hidden;
+        }
+        .wheel-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transition: transform 4s cubic-bezier(0.1, 0.8, 0.25, 1);
+        }
+        .wheel-pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #ef4444;
+            z-index: 10;
         }
     </style>
 </head>
-<body class="min-h-screen bg-[#07070c] select-none antialiased">
-    <div class="max-w-md mx-auto min-h-screen flex flex-col bg-[#07070c] relative pb-24">
-        
-        <header class="bg-[#0f0f1a]/80 backdrop-blur-md border-b border-zinc-800/50 p-4 sticky top-0 z-50 flex items-center justify-between">
+<body class="min-h-screen bg-[#0a0a0a] overflow-x-hidden">
+
+<div class="max-w-md mx-auto min-h-screen bg-gradient-to-b from-[#0b0b0f] to-[#121826] relative pb-24">
+
+    <div class="sticky top-0 z-40 bg-[#0f172a]/90 backdrop-blur-lg border-b border-zinc-800">
+        <div class="px-5 py-4 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                    <i class="fas fa-cube text-white text-sm"></i>
+                <div class="w-11 h-11 rounded-2xl bg-cyan-500 flex items-center justify-center text-black font-bold text-xl shadow-lg shadow-cyan-500/30">
+                    ⚡
                 </div>
+
                 <div>
-                    <h1 class="text-sm font-bold tracking-wide uppercase text-zinc-200">TRON MINER</h1>
-                    <div class="flex items-center gap-1.5 mt-0.5">
-                        <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                        <span class="text-[10px] text-zinc-400 font-medium">Red Activa (TRC20)</span>
-                    </div>
+                    <h1 class="font-bold text-xl text-white">TRON MINER</h1>
+                    <p class="text-xs text-cyan-400">Telegram Mini App</p>
                 </div>
             </div>
-            <div class="bg-zinc-900/80 px-3 py-1.5 rounded-full border border-zinc-800 flex items-center gap-2">
-                <span class="text-xs font-semibold text-zinc-300" id="topNavUser">Cargando...</span>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs">
+                Online
             </div>
-        </header>
-
-        <main class="flex-1 p-4 space-y-6">
-            
-            <section id="tab-mining" class="tab-content active space-y-5">
-                <div class="bg-gradient-to-b from-[#121225] to-[#0f0f1a] rounded-3xl p-6 text-center border border-zinc-800/80 glow-card relative overflow-hidden">
-                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl"></div>
-                    <p class="text-zinc-400 text-xs font-bold tracking-widest uppercase">Tu Balance Disponible</p>
-                    <div class="flex items-baseline justify-center gap-2 mt-3">
-                        <div id="balance" class="text-4xl font-extrabold text-white tracking-tight glow-cyan">0.00000</div>
-                        <span class="text-lg font-bold text-cyan-400">TRX</span>
-                    </div>
-                </div>
-
-                <div class="bg-[#0f0f1a] rounded-3xl p-5 text-center border border-zinc-800/60 glow-card flex items-center justify-between px-6">
-                    <div class="text-left">
-                        <p class="text-zinc-400 text-xs font-semibold">Próxima Recompensa</p>
-                        <p id="timerStatus" class="text-[11px] text-zinc-500 mt-0.5">Reclamos cada 3 minutos</p>
-                    </div>
-                    <div id="timer" class="text-3xl font-black text-emerald-400 font-mono tracking-wider">03:00</div>
-                </div>
-
-                <div class="space-y-3">
-                    <button id="mineBtn" class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-base py-5 rounded-2xl flex flex-col items-center justify-center shadow-xl shadow-cyan-500/10 disabled:opacity-40 disabled:from-zinc-800 disabled:to-zinc-900 border border-cyan-400/20 disabled:border-transparent">
-                        <i id="mineIcon" class="fas fa-bolt text-xl mb-1.5 text-cyan-200"></i>
-                        <span id="mineText" class="tracking-wide">VER ANUNCIO </span>
-                    </button>
-                    <div class="flex justify-between items-center px-2 text-[11px] text-zinc-500">
-                        <span>Pago por visualización</span>
-                        <span class="text-emerald-400 font-bold">+0.001 TRX</span>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 pt-2">
-                    <div class="bg-[#0f0f1a] rounded-2xl p-4 border border-zinc-800/60">
-                        <p class="text-[11px] text-zinc-400 font-medium">Minados Hoy</p>
-                        <div id="todayMined" class="text-lg font-bold text-emerald-400 mt-1 font-mono">0.00000</div>
-                    </div>
-                    <div class="bg-[#0f0f1a] rounded-2xl p-4 border border-zinc-800/60">
-                        <p class="text-[11px] text-zinc-400 font-medium">Total Histórico</p>
-                        <div id="totalMined" class="text-lg font-bold text-zinc-200 mt-1 font-mono">0.00000</div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="tab-friends" class="tab-content space-y-5">
-                <div class="bg-gradient-to-b from-[#1a1225] to-[#0f0f1a] rounded-3xl p-6 border border-purple-500/20 glow-card relative overflow-hidden">
-                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl"></div>
-                    <h3 class="font-bold text-lg flex items-center gap-2 text-purple-300"><i class="fas fa-users text-sm"></i> Programa de Referidos</h3>
-                    <p class="text-zinc-400 text-xs mt-2 leading-relaxed">Multiplica tus ganancias compartiendo tu enlace. Recibirás de forma directa el <span class="text-emerald-400 font-bold">15%</span> de cada minado que completen tus invitados.</p>
-                </div>
-
-                <div class="bg-[#0f0f1a] rounded-2xl p-4 border border-zinc-800 space-y-3">
-                    <span class="text-xs text-zinc-400 font-medium block">Tu enlace exclusivo de invitación</span>
-                    <div id="referralLink" class="bg-black/40 p-3.5 rounded-xl text-xs break-all font-mono border border-zinc-800/80 text-purple-300 select-all">Cargando enlace...</div>
-                    <button onclick="copyReferralLink()" class="w-full bg-purple-600/10 hover:bg-purple-600/20 text-purple-300 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-purple-500/20 transition active:scale-[0.99]">
-                        <i class="fas fa-copy text-xs"></i> Copiar Enlace
-                    </button>
-                </div>
-
-                <div class="space-y-3">
-                    <h4 class="text-xs font-bold text-zinc-400 tracking-wider uppercase flex items-center gap-2 px-1"><i class="fas fa-gift text-emerald-400"></i> Últimas Comisiones</h4>
-                    <div id="commissionHistory" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
-                </div>
-            </section>
-
-            <section id="tab-wallet" class="tab-content space-y-5">
-                <div class="bg-[#0f0f1a] rounded-3xl p-6 border border-amber-500/20 glow-card space-y-4">
-                    <h3 class="font-bold text-lg flex items-center gap-2 text-amber-400"><i class="fas fa-wallet text-sm"></i> Retiros Seguros</h3>
-                    <p class="text-zinc-400 text-xs leading-relaxed">Asegúrate de ingresar una dirección válida de la red TRON (TRC20). Los procesamientos suelen completarse de manera automática en la blockchain.</p>
-                    
-                    <div class="space-y-1.5">
-                        <label class="text-[11px] text-zinc-400 font-semibold px-1">DIRECCIÓN DE DESTINO</label>
-                        <input id="withdrawAddress" type="text" placeholder="Ej: TY7G8H..." class="w-full bg-black/60 border border-zinc-800 rounded-xl px-4 py-3.5 text-xs font-mono focus:outline-none focus:border-amber-500 text-white placeholder-zinc-600 transition">
-                    </div>
-                    
-                    <button id="withdrawBtn" class="w-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 py-4 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-amber-500/5 transition active:scale-[0.99]">RETIRAR TODO</button>
-                </div>
-
-                <div class="bg-zinc-900/30 rounded-2xl p-4 border border-zinc-800/40 flex gap-3 items-start">
-                    <i class="fas fa-info-circle text-amber-500/70 text-sm mt-0.5"></i>
-                    <p class="text-[11px] text-zinc-500 leading-normal">Los pagos se efectúan al instante directamente al Smart Contract. Verifica siempre tu saldo y dirección antes de ejecutar la transacción.</p>
-                </div>
-            </section>
-
-            <section id="tab-tasks" class="tab-content space-y-4">
-                <div class="bg-zinc-900/30 rounded-3xl p-6 border border-zinc-800/80 text-center space-y-2">
-                    <div class="w-12 h-12 bg-zinc-800/60 rounded-2xl flex items-center justify-center mx-auto text-xl text-zinc-400 mb-2">🚀</div>
-                    <h3 class="font-bold text-zinc-200 text-base">Próximamente más tareas</h3>
-                    <p class="text-zinc-500 text-xs max-w-xs mx-auto">Estamos preparando nuevas misiones y recompensas patrocinadas para acelerar tu minado de TRX.</p>
-                </div>
-            </section>
-
-        </main>
-
-        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0a0a12]/95 backdrop-blur-lg border-t border-zinc-800/80 px-2 py-2 flex items-center justify-around z-50 shadow-2xl">
-            <button onclick="switchTab('mining')" id="nav-mining" class="nav-item flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition text-cyan-400 font-semibold">
-                <i class="fas fa-hammer text-base"></i>
-                <span class="text-[10px] tracking-wide">Minado</span>
-            </button>
-            <button onclick="switchTab('friends')" id="nav-friends" class="nav-item flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition text-zinc-500">
-                <i class="fas fa-users text-base"></i>
-                <span class="text-[10px] tracking-wide">Amigos</span>
-            </button>
-            <button onclick="switchTab('wallet')" id="nav-wallet" class="nav-item flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition text-zinc-500">
-                <i class="fas fa-wallet text-base"></i>
-                <span class="text-[10px] tracking-wide">Billetera</span>
-            </button>
-            <button onclick="switchTab('tasks')" id="nav-tasks" class="nav-item flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition text-zinc-500">
-                <i class="fas fa-tasks text-base"></i>
-                <span class="text-[10px] tracking-wide">Tareas</span>
-            </button>
-        </nav>
+        </div>
     </div>
 
+    <section id="screen-mining" class="app-screen p-5 space-y-5">
+
+        <div class="bg-[#131c2f] rounded-3xl p-7 border border-cyan-500/20 shadow-xl">
+            <p class="text-zinc-400 text-sm mb-2">Balance disponible</p>
+
+            <div class="flex items-end gap-2">
+                <div id="balance" class="text-5xl font-bold text-white">0.00000</div>
+                <div class="text-cyan-400 text-2xl font-bold mb-1">TRX</div>
+            </div>
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800 text-center">
+            <p class="text-zinc-400 text-sm mb-3">
+                Próxima recompensa
+            </p>
+
+            <div id="timer" class="timer text-emerald-400">
+                03:00
+            </div>
+
+            <p id="timerStatus" class="text-zinc-500 text-xs mt-2">
+                Puedes reclamar cada 3 minutes
+            </p>
+        </div>
+
+        <button id="mineBtn"
+            class="mining-btn w-full rounded-3xl py-6 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-lg shadow-2xl shadow-cyan-500/20">
+
+            <div class="flex flex-col items-center justify-center">
+                <i id="mineIcon" class="fas fa-bolt text-3xl mb-2"></i>
+                <span id="mineText">VER ANUNCIO</span>
+            </div>
+
+        </button>
+
+        <div class="grid grid-cols-2 gap-4">
+
+            <div class="bg-[#131c2f] rounded-2xl p-5 border border-zinc-800">
+                <p class="text-zinc-400 text-xs">
+                    Minado hoy
+                </p>
+
+                <div id="todayMined"
+                    class="text-emerald-400 text-xl font-bold mt-2">
+                    0.00000
+                </div>
+            </div>
+
+            <div class="bg-[#131c2f] rounded-2xl p-5 border border-zinc-800">
+                <p class="text-zinc-400 text-xs">
+                    Total minado
+                </p>
+
+                <div id="totalMined"
+                    class="text-white text-xl font-bold mt-2">
+                    0.00000
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section id="screen-friends"
+        class="app-screen hidden p-5 space-y-5">
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-purple-500/20">
+
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center">
+                    <i class="fas fa-users text-purple-400 text-xl"></i>
+                </div>
+
+                <div>
+                    <h2 class="font-bold text-lg">Invita amigos</h2>
+                    <p class="text-xs text-zinc-400">
+                        Gana 15% de comisión
+                    </p>
+                </div>
+            </div>
+
+            <div id="referralLink"
+                class="bg-black/40 rounded-2xl p-4 text-xs text-purple-300 break-all border border-zinc-800">
+                Cargando enlace...
+            </div>
+
+            <button onclick="copyReferralLink()"
+                class="w-full mt-4 bg-purple-600 py-4 rounded-2xl font-semibold">
+                Copiar enlace
+            </button>
+
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
+            <h3 class="font-semibold mb-4">
+                Amigos registrados
+            </h3>
+            <div id="referralsList" class="space-y-3 max-h-[250px] overflow-y-auto">
+                </div>
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
+
+            <h3 class="font-semibold mb-4">
+                Historial de comisiones
+            </h3>
+
+            <div id="commissionHistory"
+                class="space-y-3 max-h-[350px] overflow-y-auto">
+            </div>
+
+        </div>
+
+    </section>
+
+    <section id="screen-tasks" class="app-screen hidden p-5 space-y-5 pb-12">
+        <div class="bg-[#131c2f] rounded-3xl p-5 border border-zinc-800">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-bold text-md flex items-center gap-2 text-amber-400">
+                    <i class="fas fa-calendar-check"></i> Check-in Diario
+                </h3>
+                <span class="text-xs bg-zinc-800 text-zinc-300 px-2 py-1 rounded-md">
+                    Racha: <span id="dailyStreakCount">0</span> días
+                </span>
+            </div>
+            <div id="dailyRewardInfo" class="text-xs text-zinc-400 mb-4">
+                Completa tu check-in consecutivo para obtener recompensas crecientes. 
+                <div id="nextDailyRewardText" class="text-emerald-400 font-semibold mt-1">Siguiente: 0.001 TRX</div>
+            </div>
+            <button id="claimDailyBtn" class="w-full py-3 rounded-2xl font-bold bg-gradient-to-r from-amber-500 to-yellow-600 text-black text-sm transition active:scale-95">
+                RECLAMAR RECOMPENSA DIARIA
+            </button>
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-5 border border-zinc-800 text-center space-y-4">
+            <h3 class="font-bold text-md text-left text-cyan-400 flex items-center gap-2">
+                <i class="fas fa-pie-chart"></i> Ruleta de la Suerte
+            </h3>
+            
+            <div class="wheel-container">
+                <div class="wheel-pointer"></div>
+                <canvas id="wheelCanvas" class="wheel-canvas" width="260" height="260"></canvas>
+            </div>
+
+            <button id="spinWheelBtn" class="w-full py-3 rounded-2xl font-bold bg-cyan-500 text-black text-sm transition active:scale-95">
+                VER AD Y GIRAR RULETA
+            </button>
+
+            <div class="text-left bg-black/30 p-3 rounded-xl">
+                <h4 class="text-xs font-semibold text-zinc-400 mb-2">Últimos Premios:</h4>
+                <div id="spinHistoryList" class="space-y-1 max-h-[80px] overflow-y-auto text-[11px] text-zinc-300">
+                    <p class="text-zinc-500 italic">No hay giros recientes</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-5 border border-zinc-800 space-y-3">
+            <h3 class="font-bold text-md text-purple-400 flex items-center gap-2">
+                <i class="fas fa-tasks"></i> Tareas de Redes Sociales
+            </h3>
+            <div id="socialTasksContainer" class="space-y-3">
+                </div>
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-5 border border-zinc-800 space-y-4">
+            <h3 class="font-bold text-md text-emerald-400 flex items-center gap-2">
+                <i class="fas fa-trophy"></i> Metas de Referidos
+            </h3>
+            <div class="bg-black/30 p-3 rounded-xl flex justify-between items-center text-xs">
+                <span class="text-zinc-400">Tus Referidos Actuales:</span>
+                <span id="milestonesCurrentRefs" class="font-bold text-white bg-zinc-800 px-2.5 py-0.5 rounded-full">0</span>
+            </div>
+            <div id="referralMilestonesContainer" class="space-y-3">
+                </div>
+        </div>
+    </section>
+
+    <section id="screen-wallet"
+        class="app-screen hidden p-5 space-y-5">
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-amber-500/20">
+
+            <p class="text-zinc-400 text-sm mb-2">
+                Balance total
+            </p>
+
+            <div class="text-5xl font-bold text-white">
+                <span id="walletBalance">0.00000</span>
+                <span class="text-amber-400 text-2xl">TRX</span>
+            </div>
+
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
+
+            <h3 class="font-semibold mb-4">
+                Retirar fondos
+            </h3>
+
+            <input
+                id="withdrawAddress"
+                type="text"
+                placeholder="Dirección TRON (TRC20)"
+                class="w-full bg-black border border-zinc-700 rounded-2xl px-4 py-4 text-sm text-white outline-none"
+            >
+
+            <button
+                id="withdrawBtn"
+                class="w-full mt-4 bg-gradient-to-r from-amber-500 to-yellow-500 py-4 rounded-2xl font-bold text-black">
+                RETIRAR TODO
+            </button>
+
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
+            <h3 class="font-semibold mb-4">
+                Historial de retiros
+            </h3>
+            <div id="withdrawHistory" class="space-y-3 max-h-[250px] overflow-y-auto">
+                </div>
+        </div>
+
+    </section>
+
+    <section id="screen-profile"
+        class="app-screen hidden p-5 space-y-5">
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
+
+            <div class="flex items-center gap-4">
+
+                <div class="w-16 h-16 rounded-full bg-cyan-500 flex items-center justify-center text-black font-bold text-2xl">
+                    👤
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-lg">
+                        Usuario Telegram
+                    </h3>
+
+                    <p class="text-zinc-400 text-sm">
+                        ID: <span id="profileUserId">---</span>
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
+            <p class="text-zinc-400 text-sm">
+                Plataforma optimizada para Telegram Mini Apps.
+            </p>
+        </div>
+
+    </section>
+
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0b1120]/95 backdrop-blur-xl border-t border-zinc-800 z-50">
+
+        <div class="grid grid-cols-5 h-20">
+
+            <button class="nav-btn active" data-screen="mining">
+                <i class="fas fa-bolt"></i>
+                <span>Minado</span>
+            </button>
+
+            <button class="nav-btn" data-screen="tasks">
+                <i class="fas fa-list-check"></i>
+                <span>Tareas</span>
+            </button>
+
+            <button class="nav-btn" data-screen="friends">
+                <i class="fas fa-users"></i>
+                <span>Amigos</span>
+            </button>
+
+            <button class="nav-btn" data-screen="wallet">
+                <i class="fas fa-wallet"></i>
+                <span>Billetera</span>
+            </button>
+
+            <button class="nav-btn" data-screen="profile">
+                <i class="fas fa-user"></i>
+                <span>Perfil</span>
+            </button>
+
+        </div>
+
+    </nav>
+
+</div>
+
     <script>
-        // === CONFIG (SIN ALTERACIONES) ===
+        // === CONFIG ===
         const SUPABASE_URL = "https://gmyysxuszqwhsbuglvos.supabase.co/rest/v1/";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdteXlzeHVzenF3aHNidWdsdm9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODExOTQsImV4cCI6MjA5NjM1NzE5NH0.C-1TCD8BG-GJtJl6hxJGmo60rqyNee4Q_bsEebRIveQ";
         
+        // FUNCIONALIDAD NUEVA #1: CONFIGURACIÓN MÍNIMO DE RETIRO
+        const MIN_WITHDRAW = 0.01;
+
         let currentUser = null;
         let telegramUserId = null;
         const BOT_USERNAME = "generartrx2026bot";
@@ -189,7 +436,7 @@
         let AdController = null;
         let timerInterval = null;
 
-        // Elementos UI Mantenidos
+        // Elementos UI
         const balanceEl = document.getElementById('balance');
         const totalMinedEl = document.getElementById('totalMined');
         const todayMinedEl = document.getElementById('todayMined');
@@ -199,22 +446,25 @@
         const timerEl = document.getElementById('timer');
         const timerStatus = document.getElementById('timerStatus');
 
-        // LÓGICA DE NAVEGACIÓN (NUEVA NUEVA)
-        function switchTab(tabId) {
-            // Ocultar todas las secciones
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            // Desactivar todos los botones de navegación
-            document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('text-cyan-400', 'font-semibold');
-                el.classList.add('text-zinc-500');
-            });
+        // Variables de Control para la sección de Tareas Nuevas
+        const wheelRewards = [0.0005, 0.001, 0.001, 0.002, 0.002, 0.005, 0.01, 0];
+        const wheelColors = ["#0ea5e9", "#1e293b", "#0ea5e9", "#1e293b", "#0ea5e9", "#1e293b", "#eab308", "#ef4444"];
+        let isSpinning = false;
+        
+        const staticSocialTasks = [
+            { id: "tg_join", name: "Unirse al canal de Telegram", url: "https://t.me/generartrx2026bot", reward: 0.01 },
+            { id: "tiktok_follow", name: "Seguir en TikTok", url: "https://tiktok.com", reward: 0.005 },
+            { id: "fb_follow", name: "Seguir en Facebook", url: "https://facebook.com", reward: 0.005 },
+            { id: "web_visit", name: "Visitar Sitio Web Oficial", url: "https://google.com", reward: 0.002 }
+        ];
+        
+        const milestonesConfig = [
+            { id: 1, req: 5, reward: 0.05 },
+            { id: 2, req: 20, reward: 0.25 },
+            { id: 3, req: 50, reward: 1.0 }
+        ];
 
-            // Activar pestaña e icono seleccionado
-            document.getElementById(`tab-${tabId}`).classList.add('active');
-            const currentNav = document.getElementById(`nav-${tabId}`);
-            currentNav.classList.remove('text-zinc-500');
-            currentNav.classList.add('text-cyan-400', 'font-semibold');
-        }
+        const dailyRewardsConfig = [0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.01];
 
         async function supabaseRequest(endpoint, method = "GET", body = null) {
             try {
@@ -244,8 +494,6 @@
                 const user = window.Telegram.WebApp.initDataUnsafe?.user;
                 if (user) {
                     telegramUserId = user.id;
-                    // Mostrar username o ID en el Header de forma estética
-                    document.getElementById('topNavUser').textContent = user.username ? `@${user.username}` : `ID: ${user.id}`;
                 }
                 
                 const startParam = window.Telegram.WebApp.initDataUnsafe?.start_param;
@@ -254,9 +502,9 @@
                 }
             }
 
+            // Fallback para desarrollo local si no se abre desde Telegram
             if (!telegramUserId) {
                 telegramUserId = 5002555137; 
-                document.getElementById('topNavUser').textContent = "Local Dev";
             }
 
             if (referredBy == telegramUserId) {
@@ -284,6 +532,7 @@
                     currentUser = newUser;
                 }
 
+                // Incrementar contador del que invitó
                 if (referredBy) {
                     const refUsers = await supabaseRequest(`users?telegram_id=eq.${referredBy}`);
                     if (refUsers && refUsers.length > 0) {
@@ -328,11 +577,10 @@
             for (let i = 0; i < count; i++) {
                 const p = document.createElement('div');
                 p.className = 'particle';
-                p.style.setProperty('--md-x', `${(Math.random() - 0.5) * 80}px`);
                 p.style.left = `${Math.random() * window.innerWidth}px`;
                 p.style.top = `${window.innerHeight * 0.35}px`;
                 document.body.appendChild(p);
-                setTimeout(() => p.remove(), 1200);
+                setTimeout(() => p.remove(), 1500);
             }
         }
 
@@ -340,17 +588,17 @@
             const timeLeft = COOLDOWN - (Date.now() - lastMineTime);
             if (timeLeft <= 0) {
                 timerEl.textContent = "00:00";
-                timerEl.className = "text-3xl font-black text-emerald-400 font-mono tracking-wider animate-pulse";
+                timerEl.className = "timer text-emerald-400 animate-pulse";
                 timerStatus.textContent = "¡Listo para reclamar!";
                 mineBtn.disabled = false;
-                mineText.textContent = "VER ANUNCIO Y RECLAMAR";
+                mineText.textContent = "VER ANUNCIO AND RECLAMAR";
                 return;
             }
 
             const minutes = Math.floor(timeLeft / 60000);
             const seconds = Math.floor((timeLeft % 60000) / 1000);
             timerEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-            timerEl.className = "text-3xl font-black text-amber-400 font-mono tracking-wider";
+            timerEl.className = "timer text-amber-400";
             
             mineBtn.disabled = true;
             mineText.textContent = "ESPERA EL CRONÓMETRO";
@@ -370,6 +618,7 @@
             mineIcon.classList.add('fa-spin');
 
             try {
+                // Ejecución del anuncio AdsGram con el nuevo ID 34461
                 await AdController.show();
 
                 const reward = 0.001;
@@ -378,6 +627,7 @@
                 lastMineTime = Date.now();
                 localStorage.setItem('lastMineTime', lastMineTime);
 
+                // SISTEMA DE COMISIÓN DE REFERIDOS (referred_by)
                 if (currentUser && currentUser.referred_by) {
                     const referrerId = currentUser.referred_by;
                     const commission = reward * 0.15;
@@ -387,10 +637,12 @@
                     if (refUsers && refUsers.length > 0) {
                         const refUser = refUsers[0];
 
+                        // Sumar comisión al balance del padrino
                         await supabaseRequest(`users?telegram_id=eq.${referrerId}`, "PATCH", {
                             balance: parseFloat(((refUser.balance || 0) + commission).toFixed(5))
                         });
 
+                        // Guardar log en el historial
                         await supabaseRequest("referral_commissions", "POST", {
                             referrer_id: parseInt(referrerId),
                             referred_user_id: telegramUserId,
@@ -399,6 +651,7 @@
                     }
                 }
 
+                // Guardar datos del usuario actual de manera persistente
                 await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
                     balance: parseFloat(balance.toFixed(5)),
                     total_mined: parseFloat(totalMined.toFixed(5))
@@ -415,7 +668,7 @@
                 console.warn("Anuncio omitido o error:", e);
                 alert("⚠️ Debes ver el anuncio completo para recibir la recompensa.");
                 updateTimer();
-            } finaly {
+            } finally {
                 mineIcon.classList.remove('fa-spin');
             }
         }
@@ -426,38 +679,659 @@
             const container = document.getElementById('commissionHistory');
 
             if (!history || !history.length) {
-                container.innerHTML = '<p class="text-zinc-600 text-xs text-center py-4 bg-zinc-900/10 rounded-2xl border border-zinc-800/40">Sin comisiones aún</p>';
+                container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">Sin comisiones aún</p>';
                 return;
             }
 
             container.innerHTML = history.map(item => `
-                <div class="bg-[#0f0f1a] rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
+                <div class="bg-black/40 rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
                     <div>
-                        <div class="text-xs text-cyan-400 font-mono font-medium">ID: ${item.referred_user_id}</div>
-                        <div class="text-[10px] text-zinc-500 mt-0.5">${new Date(item.created_at).toLocaleString()}</div>
+                        <div class="text-xs text-cyan-300 font-mono">ID: ${item.referred_user_id}</div>
+                        <div class="text-[10px] text-zinc-500">${new Date(item.created_at).toLocaleString()}</div>
                     </div>
-                    <div class="text-emerald-400 font-bold text-xs font-mono">+${Number(item.amount).toFixed(5)} TRX</div>
+                    <div class="text-emerald-400 font-bold text-sm">+${Number(item.amount).toFixed(5)} TRX</div>
                 </div>
             `).join('');
         }
 
+        // FUNCIONALIDAD NUEVA #1: FUNCIÓN DE RETIRO (MANTIENE EL BOTÓN EXISTENTE)
+        async function requestWithdraw() {
+            const address = document.getElementById('withdrawAddress').value.trim();
+
+            if (!address) {
+                alert("Ingrese una dirección TRC20");
+                return;
+            }
+
+            if (balance < MIN_WITHDRAW) {
+                alert(`El retiro mínimo es ${MIN_WITHDRAW} TRX`);
+                return;
+            }
+
+            const amount = balance;
+
+            await supabaseRequest(
+                "withdrawals",
+                "POST",
+                {
+                    telegram_id: telegramUserId,
+                    wallet_address: address,
+                    amount: amount,
+                    status: "pending"
+                }
+            );
+
+            balance = 0;
+
+            await supabaseRequest(
+                `users?telegram_id=eq.${telegramUserId}`,
+                "PATCH",
+                {
+                    balance: 0
+                }
+            );
+
+            updateUI();
+
+            await loadWithdrawHistory();
+
+            alert("✅ Solicitud enviada correctamente");
+        }
+
+        // FUNCIONALIDAD NUEVA #2: CARGAR HISTORIAL DE RETIROS
+        async function loadWithdrawHistory() {
+            const history = await supabaseRequest(
+                `withdrawals?telegram_id=eq.${telegramUserId}&order=created_at.desc`
+            );
+
+            const container = document.getElementById('withdrawHistory');
+
+            if (!history.length) {
+                container.innerHTML = `
+                <p class="text-zinc-500 text-xs">
+                Sin retiros todavía
+                </p>
+                `;
+                return;
+            }
+
+            container.innerHTML = history.map(item => `
+                <div class="bg-black/30 p-4 rounded-xl">
+                    <div class="flex justify-between">
+                        <span>
+                            ${Number(item.amount).toFixed(5)} TRX
+                        </span>
+                        <span class="${
+                            item.status === 'paid' || item.status === 'approved'
+                            ? 'text-emerald-400'
+                            : item.status === 'rejected'
+                            ? 'text-red-400'
+                            : 'text-amber-400'
+                        }">
+                            ${item.status}
+                        </span>
+                    </div>
+                    <div class="text-xs text-zinc-500 mt-2">
+                        ${new Date(item.created_at).toLocaleString()}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // FUNCIONALIDAD NUEVA #3: TABLERO DE REFERIDOS
+        async function loadReferrals() {
+            if (!telegramUserId) return;
+            const referrals = await supabaseRequest(`users?referred_by=eq.${telegramUserId}&order=created_at.desc`);
+            const container = document.getElementById('referralsList');
+
+            if (!referrals || !referrals.length) {
+                container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">No has invitado a nadie todavía</p>';
+                return;
+            }
+
+            container.innerHTML = referrals.map(user => `
+                <div class="bg-black/40 rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
+                    <div>
+                        <div class="text-sm font-semibold text-white">${user.username || ('user_' + user.telegram_id)}</div>
+                        <div class="text-[10px] text-zinc-500 font-mono">ID: ${user.telegram_id}</div>
+                    </div>
+                    <div class="text-cyan-400 text-xs">Registrado</div>
+                </div>
+            `).join('');
+        }
+
+
+        // ==================================================
+        // NUEVAS LOGICAS DE SOPORTE: PESTAÑA TAREAS
+        // ==================================================
+
+        // Dibuja la ruleta en el Canvas HTML5
+        function drawWheel() {
+            const canvas = document.getElementById('wheelCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const numSegments = wheelRewards.length;
+            const anglePerSegment = (2 * Math.PI) / numSegments;
+            const radius = canvas.width / 2;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < numSegments; i++) {
+                const currentAngle = i * anglePerSegment;
+                
+                ctx.beginPath();
+                ctx.fillStyle = wheelColors[i];
+                ctx.moveTo(radius, radius);
+                ctx.arc(radius, radius, radius, currentAngle, currentAngle + anglePerSegment);
+                ctx.lineTo(radius, radius);
+                ctx.fill();
+
+                // Añadir texto de premios
+                ctx.save();
+                ctx.translate(radius, radius);
+                ctx.rotate(currentAngle + anglePerSegment / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 11px Inter";
+                
+                let text = wheelRewards[i] === 0 ? "0 TRX" : `${wheelRewards[i]} TRX`;
+                ctx.fillText(text, radius - 15, 4);
+                ctx.restore();
+            }
+        }
+
+        // Ejecuta el flujo y la animación de la ruleta de la suerte
+        async function spinWheel() {
+            if (isSpinning) return;
+
+            if (!AdController) {
+                alert("❌ AdsGram no está listo. Reintentando...");
+                return;
+            }
+
+            const btn = document.getElementById('spinWheelBtn');
+            btn.disabled = true;
+            btn.textContent = "CARGANDO ANUNCIO...";
+
+            try {
+                // Reutilización exacta de la misma instancia compartida con mine()
+                await AdController.show();
+                
+                isSpinning = true;
+                btn.textContent = "¡GIRANDO RULETA!";
+
+                const numSegments = wheelRewards.length;
+                const targetIdx = Math.floor(Math.random() * numSegments);
+                const prizeReward = wheelRewards[targetIdx];
+
+                // Animación Física/Visual de Rotación
+                const segmentAngleDeg = 360 / numSegments;
+                const canvas = document.getElementById('wheelCanvas');
+                
+                const extraDeg = 270 - (targetIdx * segmentAngleDeg) - (segmentAngleDeg / 2);
+                const totalRotation = (360 * 5) + extraDeg; 
+
+                canvas.style.transform = `rotate(${totalRotation}deg)`;
+
+                setTimeout(async () => {
+                    canvas.style.transition = 'none';
+                    canvas.style.transform = `rotate(${extraDeg}deg)`;
+                    setTimeout(() => canvas.style.transition = 'transform 4s cubic-bezier(0.1, 0.8, 0.25, 1)', 50);
+
+                    // Acreditación de Balance principal
+                    balance += prizeReward;
+                    await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                        balance: parseFloat(balance.toFixed(5))
+                    });
+
+                    // Guardado en la tabla spin_history
+                    await supabaseRequest("spin_history", "POST", {
+                        telegram_id: telegramUserId,
+                        reward: prizeReward
+                    });
+
+                    updateUI();
+                    await loadSpinHistory();
+                    
+                    if (prizeReward > 0) {
+                        alert(`🎁 ¡Felicidades! Has ganado ${prizeReward} TRX`);
+                    } else {
+                        alert("😔 Suerte para la próxima.");
+                    }
+
+                    isSpinning = false;
+                    btn.disabled = false;
+                    btn.textContent = "VER AD Y GIRAR RULETA";
+                }, 4000);
+
+            } catch (err) {
+                console.warn("Anuncio omitido o con fallas en ruleta:", err);
+                alert("⚠️ Para girar la ruleta debes visualizar completamente el anuncio publicitario.");
+                isSpinning = false;
+                btn.disabled = false;
+                btn.textContent = "VER AD Y GIRAR RULETA";
+            }
+        }
+
+        // Carga el historial visual de los giros de ruleta
+        async function loadSpinHistory() {
+            if (!telegramUserId) return;
+            const history = await supabaseRequest(`spin_history?telegram_id=eq.${telegramUserId}&order=created_at.desc&limit=5`);
+            const container = document.getElementById('spinHistoryList');
+            if (!container) return;
+
+            if (!history || !history.length) {
+                container.innerHTML = '<p class="text-zinc-500 italic">No hay giros recientes</p>';
+                return;
+            }
+
+            container.innerHTML = history.map(item => `
+                <div class="flex justify-between items-center border-b border-zinc-800/40 pb-1">
+                    <span class="text-zinc-400">${new Date(item.created_at).toLocaleTimeString()}</span>
+                    <span class="${item.reward > 0 ? 'text-cyan-400 font-bold' : 'text-zinc-500'}">${item.reward > 0 ? '+' + Number(item.reward).toFixed(4) + ' TRX' : '0 TRX'}</span>
+                </div>
+            `).join('');
+        }
+
+        // Carga y procesa el estado de las Tareas de Redes Sociales
+        async function loadSocialTasks() {
+            if (!telegramUserId) return;
+            const completedList = await supabaseRequest(`social_tasks_completed?telegram_id=eq.${telegramUserId}`);
+            const completedIds = (completedList || []).map(t => t.task_id);
+
+            const container = document.getElementById('socialTasksContainer');
+            if (!container) return;
+
+            container.innerHTML = staticSocialTasks.map(task => {
+                const isDone = completedIds.includes(task.id);
+                if (isDone) {
+                    return `
+                        <div class="bg-black/30 p-3 rounded-2xl flex justify-between items-center border border-zinc-800/60">
+                            <div>
+                                <div class="text-xs font-semibold text-zinc-300">${task.name}</div>
+                                <div class="text-[10px] text-emerald-400 font-medium">+${task.reward} TRX</div>
+                            </div>
+                            <span class="bg-emerald-500/10 text-emerald-400 font-bold text-[10px] px-3 py-1.5 rounded-xl border border-emerald-500/20">
+                                COMPLETADA
+                            </span>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="bg-black/30 p-3 rounded-2xl flex justify-between items-center border border-zinc-800/60" id="task-row-${task.id}">
+                            <div>
+                                <div class="text-xs font-semibold text-white">${task.name}</div>
+                                <div class="text-[10px] text-purple-400 font-medium">+${task.reward} TRX</div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="openSocialTaskLink('${task.id}', '${task.url}')" id="btn-open-${task.id}" class="bg-purple-600 text-white text-[11px] px-3 py-1.5 rounded-xl font-semibold active:scale-95 transition">
+                                    Abrir
+                                </button>
+                                <button onclick="claimSocialTask('${task.id}', ${task.reward})" id="btn-claim-${task.id}" disabled class="bg-zinc-700 text-zinc-400 text-[11px] px-3 py-1.5 rounded-xl font-semibold opacity-50 cursor-not-allowed transition">
+                                    Reclamar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+        }
+
+        // Flujo del botón Abrir en Tareas de Redes Sociales con contador
+        function openSocialTaskLink(taskId, url) {
+            window.open(url, '_blank');
+            const openBtn = document.getElementById(`btn-open-${taskId}`);
+            const claimBtn = document.getElementById(`btn-claim-${taskId}`);
+            
+            if (!openBtn || !claimBtn) return;
+            
+            openBtn.disabled = true;
+            let secondsLeft = 10;
+            openBtn.textContent = `${secondsLeft}s`;
+
+            const counter = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft <= 0) {
+                    clearInterval(counter);
+                    openBtn.textContent = "Abierto";
+                    claimBtn.removeAttribute("disabled");
+                    claimBtn.className = "bg-emerald-500 text-black text-[11px] px-3 py-1.5 rounded-xl font-semibold active:scale-95 transition";
+                } else {
+                    openBtn.textContent = `${secondsLeft}s`;
+                }
+            }, 1000);
+        }
+
+        // Reclamo efectivo de la recompensa por Tarea Social
+        async function claimSocialTask(taskId, rewardAmount) {
+            if (!telegramUserId) return;
+            
+            const check = await supabaseRequest(`social_tasks_completed?telegram_id=eq.${telegramUserId}&task_id=eq.${taskId}`);
+            if (check && check.length > 0) {
+                alert("Esta tarea ya fue completada.");
+                loadSocialTasks();
+                return;
+            }
+
+            await supabaseRequest("social_tasks_completed", "POST", {
+                telegram_id: telegramUserId,
+                task_id: taskId,
+                reward: rewardAmount
+            });
+
+            balance += rewardAmount;
+            await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                balance: parseFloat(balance.toFixed(5))
+            });
+
+            updateUI();
+            alert(`✅ Recompensa de ${rewardAmount} TRX añadida correctamente.`);
+            await loadSocialTasks();
+        }
+
+        // Carga y computa los hitos de bonificación extra por volumen de Referidos
+        async function loadReferralMilestones() {
+            if (!telegramUserId || !currentUser) return;
+            
+            const rawRefs = await supabaseRequest(`users?referred_by=eq.${telegramUserId}`);
+            const countRefs = rawRefs ? rawRefs.length : 0;
+            
+            const currentRefsElement = document.getElementById('milestonesCurrentRefs');
+            if (currentRefsElement) currentRefsElement.textContent = countRefs;
+
+            const claimedMilestonesList = await supabaseRequest(`referral_milestones?telegram_id=eq.${telegramUserId}`);
+            const claimedIds = (claimedMilestonesList || []).map(m => parseInt(m.milestone));
+
+            const container = document.getElementById('referralMilestonesContainer');
+            if (!container) return;
+
+            container.innerHTML = milestonesConfig.map(ms => {
+                const isClaimed = claimedIds.includes(ms.id);
+                const progressPercent = Math.min(100, (countRefs / ms.req) * 100);
+
+                let actionButtonHTML = '';
+                if (isClaimed) {
+                    actionButtonHTML = `<span class="text-[11px] text-zinc-500 font-bold bg-zinc-800/40 px-3 py-1 rounded-xl border border-zinc-800">RECLAMADO</span>`;
+                } else if (countRefs >= ms.req) {
+                    actionButtonHTML = `
+                        <button onclick="claimMilestoneBonus(${ms.id}, ${ms.reward})" class="bg-gradient-to-r from-emerald-500 to-green-600 text-black text-[11px] px-3 py-1.5 rounded-xl font-bold active:scale-95 transition shadow-md shadow-emerald-500/10">
+                            Reclamar
+                        </button>`;
+                } else {
+                    actionButtonHTML = `<span class="text-[10px] text-zinc-400 font-medium bg-black/40 px-2.5 py-1 rounded-lg border border-zinc-800">${countRefs}/${ms.req} Amigos</span>`;
+                }
+
+                return `
+                    <div class="bg-black/20 p-3.5 rounded-2xl border border-zinc-800/60 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="text-xs font-semibold text-white">Meta: ${ms.req} Referidos</h4>
+                                <p class="text-[10px] text-emerald-400 font-medium">Bono: +${ms.reward} TRX</p>
+                            </div>
+                            <div>
+                                ${actionButtonHTML}
+                            </div>
+                        </div>
+                        <div class="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
+                            <div class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full transition-all duration-500" style="width: ${progressPercent}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Ejecuta el cobro de un hito por referidos verificado
+        async function claimMilestoneBonus(milestoneId, reward) {
+            if (!telegramUserId) return;
+
+            const check = await supabaseRequest(`referral_milestones?telegram_id=eq.${telegramUserId}&milestone=eq.${milestoneId}`);
+            if (check && check.length > 0) {
+                alert("Esta bonificación ya fue obtenida anteriormente.");
+                loadReferralMilestones();
+                return;
+            }
+
+            await supabaseRequest("referral_milestones", "POST", {
+                telegram_id: telegramUserId,
+                milestone: milestoneId,
+                reward: reward
+            });
+
+            balance += reward;
+            await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                balance: parseFloat(balance.toFixed(5))
+            });
+
+            updateUI();
+            alert(`🎉 ¡Excelente! Has cobrado tu bono acumulativo de ${reward} TRX.`);
+            await loadReferralMilestones();
+        }
+
+        // Procesa e inicializa el Check-In diario del usuario
+        async function loadDailyCheckIn() {
+            if (!telegramUserId) return;
+            const records = await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`);
+            let streak = 0;
+            let canClaimNow = true;
+
+            if (records && records.length > 0) {
+                const userRow = records[0];
+                const lastCheckinDate = new Date(userRow.last_checkin_at);
+                const now = new Date();
+
+                const diffTime = now.getTime() - lastCheckinDate.getTime();
+                const diffHours = diffTime / (1000 * 60 * 60);
+
+                if (diffHours < 24) {
+                    canClaimNow = false;
+                    streak = userRow.current_streak;
+                } else if (diffHours >= 24 && diffHours < 48) {
+                    streak = userRow.current_streak;
+                    canClaimNow = true;
+                } else {
+                    streak = 0;
+                    canClaimNow = true;
+                }
+            }
+
+            document.getElementById('dailyStreakCount').textContent = streak;
+            
+            const rewardIndex = streak % 7;
+            const currentRewardValue = dailyRewardsConfig[rewardIndex];
+            
+            document.getElementById('nextDailyRewardText').textContent = `Premio disponible (Día ${rewardIndex + 1}): ${currentRewardValue} TRX`;
+
+            const claimBtn = document.getElementById('claimDailyBtn');
+            if (!canClaimNow) {
+                claimBtn.disabled = true;
+                claimBtn.textContent = "MAÑANA PODRÁS VOLVER A RECLAMAR";
+                claimBtn.className = "w-full py-3 rounded-2xl font-bold bg-zinc-800 text-zinc-500 text-sm cursor-not-allowed opacity-60";
+            } else {
+                claimBtn.disabled = false;
+                claimBtn.textContent = `VER ANUNCIO Y RECLAMAR DÍA ${rewardIndex + 1} (+${currentRewardValue} TRX)`;
+                claimBtn.className = "w-full py-3 rounded-2xl font-bold bg-gradient-to-r from-amber-500 to-yellow-600 text-black text-sm transition active:scale-95";
+            }
+        }
+
+        // Procesa el evento del clic para realizar el Check-in diario persistente
+        async function executeDailyCheckIn() {
+            if (!telegramUserId) return;
+
+            if (!AdController) {
+                alert("❌ AdsGram no está listo. Reintentando...");
+                return;
+            }
+
+            const claimBtn = document.getElementById('claimDailyBtn');
+            claimBtn.disabled = true;
+            claimBtn.textContent = "CARGANDO ANUNCIO...";
+
+            try {
+                // Integración obligatoria de la misma instancia exacta compartida de AdsGram
+                await AdController.show();
+
+                const records = await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`);
+                let streak = 0;
+                let exists = false;
+
+                if (records && records.length > 0) {
+                    exists = true;
+                    const userRow = records[0];
+                    const lastCheckinDate = new Date(userRow.last_checkin_at);
+                    const now = new Date();
+                    const diffHours = (now.getTime() - lastCheckinDate.getTime()) / (1000 * 60 * 60);
+
+                    if (diffHours < 24) {
+                        alert("Ya has completado tu check-in de hoy.");
+                        loadDailyCheckIn();
+                        return;
+                    } else if (diffHours >= 24 && diffHours < 48) {
+                        streak = userRow.current_streak + 1;
+                    } else {
+                        streak = 1; 
+                    }
+                } else {
+                    streak = 1; 
+                }
+
+                const rewardIndex = (streak - 1) % 7;
+                const rewardAmount = dailyRewardsConfig[rewardIndex];
+
+                if (exists) {
+                    await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                        current_streak: streak,
+                        last_checkin_at: new Date().toISOString()
+                    });
+                } else {
+                    await supabaseRequest("daily_checkin", "POST", {
+                        telegram_id: telegramUserId,
+                        current_streak: streak,
+                        last_checkin_at: new Date().toISOString()
+                    });
+                }
+
+                balance += rewardAmount;
+                await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                    balance: parseFloat(balance.toFixed(5))
+                });
+
+                updateUI();
+                alert(`📆 Check-In exitoso. Día ${rewardIndex + 1} completado. Recibes: +${rewardAmount} TRX.`);
+                await loadDailyCheckIn();
+
+            } catch (err) {
+                console.warn("Anuncio de check-in cancelado o fallido:", err);
+                alert("⚠️ Para procesar el Check-In Diario debes visualizar completamente la publicidad.");
+                await loadDailyCheckIn();
+            }
+        }
+
+        // =========================
+        // BOTTOM NAVIGATION
+        // =========================
+
+        function switchScreen(screen) {
+
+            // ocultar todas
+            document.querySelectorAll('.app-screen').forEach(el => {
+                el.classList.add('hidden');
+            });
+
+            // remover active
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // mostrar seleccionada
+            document.getElementById(`screen-${screen}`).classList.remove('hidden');
+
+            // activar botón
+            document.querySelector(`[data-screen="${screen}"]`)
+                .classList.add('active');
+
+            if (screen === 'tasks') {
+                setTimeout(drawWheel, 100);
+            }
+        }
+
+        // listeners navegación
+        document.addEventListener('DOMContentLoaded', () => {
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+
+                btn.addEventListener('click', () => {
+
+                    const screen = btn.dataset.screen;
+
+                    switchScreen(screen);
+
+                });
+
+            });
+
+        });
+
+        // actualizar balance en wallet
+        const originalUpdateUI = updateUI;
+
+        updateUI = function() {
+
+            originalUpdateUI();
+
+            const walletBalance = document.getElementById('walletBalance');
+
+            if (walletBalance) {
+                walletBalance.textContent = balance.toFixed(5);
+            }
+
+            const profileUserId = document.getElementById('profileUserId');
+
+            if (profileUserId && telegramUserId) {
+                profileUserId.textContent = telegramUserId;
+            }
+        };
+
         async function init() {
+            // Inicializar usuario desde Telegram / Supabase
             await initUser();
+            
+            // Cargar historial
             await loadCommissionHistory();
 
+            // Inicializar AdsGram correctamente con el nuevo Block ID asignado (34461)
             if (window.Adsgram) {
                 AdController = window.Adsgram.init({ blockId: "34461", debug: false });
             } else {
                 console.error("Adsgram SDK no detectado.");
             }
 
+            // Recuperar tiempo de espera local
             const savedTime = localStorage.getItem('lastMineTime');
             if (savedTime) lastMineTime = parseInt(savedTime);
 
+            // Iniciar Reloj
             updateTimer();
             timerInterval = setInterval(updateTimer, 1000);
 
+            // Listener del botón
             mineBtn.addEventListener('click', mine);
+
+            // VINCULACIÓN DE EVENTO EN BOTÓN DE RETIRO EXISTENTE
+            document.getElementById('withdrawBtn').addEventListener('click', requestWithdraw);
+
+            // FUNCIONALIDAD NUEVA #4: INICIALIZACIÓN ASÍNCRONA
+            await loadReferrals();
+            await loadWithdrawHistory();
+
+            // INICIALIZACIONES INTERNAS ADICIONALES PARA LA SECCIÓN DE NUEVAS TAREAS
+            drawWheel();
+            await loadSpinHistory();
+            await loadSocialTasks();
+            await loadReferralMilestones();
+            await loadDailyCheckIn();
+
+            document.getElementById('spinWheelBtn').addEventListener('click', spinWheel);
+            document.getElementById('claimDailyBtn').addEventListener('click', executeDailyCheckIn);
         }
 
         window.onload = init;
