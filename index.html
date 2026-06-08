@@ -145,7 +145,7 @@
             </div>
 
             <p id="timerStatus" class="text-zinc-500 text-xs mt-2">
-                Puedes reclamar cada 3 minutes
+                Puedes reclamar cada 3 minutos
             </p>
         </div>
 
@@ -591,7 +591,7 @@
                 timerEl.className = "timer text-emerald-400 animate-pulse";
                 timerStatus.textContent = "¡Listo para reclamar!";
                 mineBtn.disabled = false;
-                mineText.textContent = "VER ANUNCIO AND RECLAMAR";
+                mineText.textContent = "VER ANUNCIO Y RECLAMAR";
                 return;
             }
 
@@ -845,7 +845,7 @@
             if (isSpinning) return;
 
             if (!AdController) {
-                alert("❌ AdsGram no está listo. Reintentando...");
+                alert("❌ El gestor de anuncios no está listo.");
                 return;
             }
 
@@ -854,7 +854,7 @@
             btn.textContent = "CARGANDO ANUNCIO...";
 
             try {
-                // Reutilización exacta de la misma instancia compartida con mine()
+                // Se invoca obligatoriamente el AdController existente
                 await AdController.show();
                 
                 isSpinning = true;
@@ -868,23 +868,25 @@
                 const segmentAngleDeg = 360 / numSegments;
                 const canvas = document.getElementById('wheelCanvas');
                 
+                // Calculamos los grados para que caiga en la parte superior del puntero (270deg de desfase estándar)
                 const extraDeg = 270 - (targetIdx * segmentAngleDeg) - (segmentAngleDeg / 2);
-                const totalRotation = (360 * 5) + extraDeg; 
+                const totalRotation = (360 * 5) + extraDeg; // 5 vueltas completas de inercia
 
                 canvas.style.transform = `rotate(${totalRotation}deg)`;
 
                 setTimeout(async () => {
+                    // Restablecer transformación limpia sin saltos visuales bruscos
                     canvas.style.transition = 'none';
                     canvas.style.transform = `rotate(${extraDeg}deg)`;
                     setTimeout(() => canvas.style.transition = 'transform 4s cubic-bezier(0.1, 0.8, 0.25, 1)', 50);
 
-                    // Acreditación de Balance principal
+                    // Acreditación de Balance
                     balance += prizeReward;
                     await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
                         balance: parseFloat(balance.toFixed(5))
                     });
 
-                    // Guardado en la tabla spin_history
+                    // Guardado en la nueva tabla spin_history
                     await supabaseRequest("spin_history", "POST", {
                         telegram_id: telegramUserId,
                         reward: prizeReward
@@ -907,7 +909,6 @@
             } catch (err) {
                 console.warn("Anuncio omitido o con fallas en ruleta:", err);
                 alert("⚠️ Para girar la ruleta debes visualizar completamente el anuncio publicitario.");
-                isSpinning = false;
                 btn.disabled = false;
                 btn.textContent = "VER AD Y GIRAR RULETA";
             }
@@ -994,8 +995,9 @@
                 if (secondsLeft <= 0) {
                     clearInterval(counter);
                     openBtn.textContent = "Abierto";
-                    claimBtn.removeAttribute("disabled");
-                    claimBtn.className = "bg-emerald-500 text-black text-[11px] px-3 py-1.5 rounded-xl font-semibold active:scale-95 transition";
+                    claimBtn.disabled = false;
+                    claimBtn.classList.remove("bg-zinc-700", "text-zinc-400", "opacity-50", "cursor-not-allowed");
+                    claimBtn.classList.add("bg-emerald-500", "text-black", "active:scale-95");
                 } else {
                     openBtn.textContent = `${secondsLeft}s`;
                 }
@@ -1006,6 +1008,7 @@
         async function claimSocialTask(taskId, rewardAmount) {
             if (!telegramUserId) return;
             
+            // Verificación redundante de seguridad local
             const check = await supabaseRequest(`social_tasks_completed?telegram_id=eq.${telegramUserId}&task_id=eq.${taskId}`);
             if (check && check.length > 0) {
                 alert("Esta tarea ya fue completada.");
@@ -1013,12 +1016,14 @@
                 return;
             }
 
+            // Almacenar en base de datos
             await supabaseRequest("social_tasks_completed", "POST", {
                 telegram_id: telegramUserId,
                 task_id: taskId,
                 reward: rewardAmount
             });
 
+            // Sumar recompensa al balance general
             balance += rewardAmount;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
                 balance: parseFloat(balance.toFixed(5))
@@ -1033,12 +1038,14 @@
         async function loadReferralMilestones() {
             if (!telegramUserId || !currentUser) return;
             
+            // Obtenemos los referidos reales llamando dinámicamente el estado actual de referidos
             const rawRefs = await supabaseRequest(`users?referred_by=eq.${telegramUserId}`);
             const countRefs = rawRefs ? rawRefs.length : 0;
             
             const currentRefsElement = document.getElementById('milestonesCurrentRefs');
             if (currentRefsElement) currentRefsElement.textContent = countRefs;
 
+            // Consultar hitos ya reclamados por este usuario
             const claimedMilestonesList = await supabaseRequest(`referral_milestones?telegram_id=eq.${telegramUserId}`);
             const claimedIds = (claimedMilestonesList || []).map(m => parseInt(m.milestone));
 
@@ -1119,16 +1126,20 @@
                 const lastCheckinDate = new Date(userRow.last_checkin_at);
                 const now = new Date();
 
-                const diffTime = now.getTime() - lastCheckinDate.getTime();
+                // Calculamos diferencia en horas continuas completadas
+                const diffTime = now - lastCheckinDate;
                 const diffHours = diffTime / (1000 * 60 * 60);
 
                 if (diffHours < 24) {
+                    // Ya reclamó en las últimas 24 horas continuas
                     canClaimNow = false;
                     streak = userRow.current_streak;
                 } else if (diffHours >= 24 && diffHours < 48) {
+                    // Está en la ventana óptima para mantener su racha intacta
                     streak = userRow.current_streak;
                     canClaimNow = true;
                 } else {
+                    // Ha expirado el tiempo límite para mantener continuidad, racha vuelve a 0
                     streak = 0;
                     canClaimNow = true;
                 }
@@ -1136,10 +1147,11 @@
 
             document.getElementById('dailyStreakCount').textContent = streak;
             
+            // Calculo de premio correspondiente (Racha cíclica de 7 días continuos)
             const rewardIndex = streak % 7;
             const currentRewardValue = dailyRewardsConfig[rewardIndex];
             
-            document.getElementById('nextDailyRewardText').textContent = `Premio disponible (Día ${rewardIndex + 1}): ${currentRewardValue} TRX`;
+            document.getElementById('nextDailyRewardText').textContent = `Premio del día (Día ${rewardIndex + 1}): ${currentRewardValue} TRX`;
 
             const claimBtn = document.getElementById('claimDailyBtn');
             if (!canClaimNow) {
@@ -1148,7 +1160,7 @@
                 claimBtn.className = "w-full py-3 rounded-2xl font-bold bg-zinc-800 text-zinc-500 text-sm cursor-not-allowed opacity-60";
             } else {
                 claimBtn.disabled = false;
-                claimBtn.textContent = `VER ANUNCIO Y RECLAMAR DÍA ${rewardIndex + 1} (+${currentRewardValue} TRX)`;
+                claimBtn.textContent = `RECLAMAR DÍA ${rewardIndex + 1} (+${currentRewardValue} TRX)`;
                 claimBtn.className = "w-full py-3 rounded-2xl font-bold bg-gradient-to-r from-amber-500 to-yellow-600 text-black text-sm transition active:scale-95";
             }
         }
@@ -1156,74 +1168,55 @@
         // Procesa el evento del clic para realizar el Check-in diario persistente
         async function executeDailyCheckIn() {
             if (!telegramUserId) return;
+            const records = await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`);
+            let streak = 0;
+            let exists = false;
 
-            if (!AdController) {
-                alert("❌ AdsGram no está listo. Reintentando...");
-                return;
+            if (records && records.length > 0) {
+                exists = true;
+                const userRow = records[0];
+                const lastCheckinDate = new Date(userRow.last_checkin_at);
+                const now = new Date();
+                const diffHours = (now - lastCheckinDate) / (1000 * 60 * 60);
+
+                if (diffHours < 24) {
+                    alert("Ya has completado tu check-in de hoy.");
+                    return;
+                } else if (diffHours >= 24 && diffHours < 48) {
+                    streak = userRow.current_streak + 1;
+                } else {
+                    streak = 1; // Racha rota, inicia de nuevo en 1
+                }
+            } else {
+                streak = 1; // Primer check-in histórico de la cuenta
             }
 
-            const claimBtn = document.getElementById('claimDailyBtn');
-            claimBtn.disabled = true;
-            claimBtn.textContent = "CARGANDO ANUNCIO...";
+            // Módulo de recompensa asignado según el día de racha computado
+            const rewardIndex = (streak - 1) % 7;
+            const rewardAmount = dailyRewardsConfig[rewardIndex];
 
-            try {
-                // Integración obligatoria de la misma instancia exacta compartida de AdsGram
-                await AdController.show();
-
-                const records = await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`);
-                let streak = 0;
-                let exists = false;
-
-                if (records && records.length > 0) {
-                    exists = true;
-                    const userRow = records[0];
-                    const lastCheckinDate = new Date(userRow.last_checkin_at);
-                    const now = new Date();
-                    const diffHours = (now.getTime() - lastCheckinDate.getTime()) / (1000 * 60 * 60);
-
-                    if (diffHours < 24) {
-                        alert("Ya has completado tu check-in de hoy.");
-                        loadDailyCheckIn();
-                        return;
-                    } else if (diffHours >= 24 && diffHours < 48) {
-                        streak = userRow.current_streak + 1;
-                    } else {
-                        streak = 1; 
-                    }
-                } else {
-                    streak = 1; 
-                }
-
-                const rewardIndex = (streak - 1) % 7;
-                const rewardAmount = dailyRewardsConfig[rewardIndex];
-
-                if (exists) {
-                    await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`, "PATCH", {
-                        current_streak: streak,
-                        last_checkin_at: new Date().toISOString()
-                    });
-                } else {
-                    await supabaseRequest("daily_checkin", "POST", {
-                        telegram_id: telegramUserId,
-                        current_streak: streak,
-                        last_checkin_at: new Date().toISOString()
-                    });
-                }
-
-                balance += rewardAmount;
-                await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
-                    balance: parseFloat(balance.toFixed(5))
+            if (exists) {
+                await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                    current_streak: streak,
+                    last_checkin_at: new Date().toISOString()
                 });
-
-                updateUI();
-                alert(`📆 Check-In exitoso. Día ${rewardIndex + 1} completado. Recibes: +${rewardAmount} TRX.`);
-                await loadDailyCheckIn();
-
-            } catch (err) {
-                console.warn("Anuncio de check-in cancelado o fallido:", err);
-                alert("⚠️ Para procesar el Check-In Diario debes visualizar completamente la publicidad.");
-                await loadDailyCheckIn();
+            } else {
+                await supabaseRequest("daily_checkin", "POST", {
+                    telegram_id: telegramUserId,
+                    current_streak: streak,
+                    last_checkin_at: new Date().toISOString()
+                });
             }
+
+            // Impactar balance e interfaz principal
+            balance += rewardAmount;
+            await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                balance: parseFloat(balance.toFixed(5))
+            });
+
+            updateUI();
+            alert(`📆 Check-In exitoso. Día ${rewardIndex + 1} completado. Recibes: +${rewardAmount} TRX.`);
+            await loadDailyCheckIn();
         }
 
         // =========================
@@ -1249,6 +1242,7 @@
             document.querySelector(`[data-screen="${screen}"]`)
                 .classList.add('active');
 
+            // Redibujado asíncrono preventivo al abrir pestañas dinámicas como la Ruleta
             if (screen === 'tasks') {
                 setTimeout(drawWheel, 100);
             }
