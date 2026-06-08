@@ -188,6 +188,14 @@
         </div>
 
         <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
+            <h3 class="font-semibold mb-4">
+                Amigos registrados
+            </h3>
+            <div id="referralsList" class="space-y-3 max-h-[250px] overflow-y-auto">
+                </div>
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
 
             <h3 class="font-semibold mb-4">
                 Historial de comisiones
@@ -236,6 +244,14 @@
                 RETIRAR TODO
             </button>
 
+        </div>
+
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
+            <h3 class="font-semibold mb-4">
+                Historial de retiros
+            </h3>
+            <div id="withdrawHistory" class="space-y-3 max-h-[250px] overflow-y-auto">
+                </div>
         </div>
 
     </section>
@@ -308,6 +324,9 @@
         const SUPABASE_URL = "https://gmyysxuszqwhsbuglvos.supabase.co/rest/v1/";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdteXlzeHVzenF3aHNidWdsdm9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODExOTQsImV4cCI6MjA5NjM1NzE5NH0.C-1TCD8BG-GJtJl6hxJGmo60rqyNee4Q_bsEebRIveQ";
         
+        // FUNCIONALIDAD NUEVA #1: CONFIGURACIÓN MÍNIMO DE RETIRO
+        const MIN_WITHDRAW = 0.01;
+
         let currentUser = null;
         let telegramUserId = null;
         const BOT_USERNAME = "generartrx2026bot";
@@ -558,6 +577,112 @@
             `).join('');
         }
 
+        // FUNCIONALIDAD NUEVA #1: FUNCIÓN DE RETIRO (MANTIENE EL BOTÓN EXISTENTE)
+        async function requestWithdraw() {
+            const address = document.getElementById('withdrawAddress').value.trim();
+
+            if (!address) {
+                alert("Ingrese una dirección TRC20");
+                return;
+            }
+
+            if (balance < MIN_WITHDRAW) {
+                alert(`El retiro mínimo es ${MIN_WITHDRAW} TRX`);
+                return;
+            }
+
+            const amount = balance;
+
+            await supabaseRequest(
+                "withdrawals",
+                "POST",
+                {
+                    telegram_id: telegramUserId,
+                    wallet_address: address,
+                    amount: amount,
+                    status: "pending"
+                }
+            );
+
+            balance = 0;
+
+            await supabaseRequest(
+                `users?telegram_id=eq.${telegramUserId}`,
+                "PATCH",
+                {
+                    balance: 0
+                }
+            );
+
+            updateUI();
+
+            await loadWithdrawHistory();
+
+            alert("✅ Solicitud enviada correctamente");
+        }
+
+        // FUNCIONALIDAD NUEVA #2: CARGAR HISTORIAL DE RETIROS
+        async function loadWithdrawHistory() {
+            const history = await supabaseRequest(
+                `withdrawals?telegram_id=eq.${telegramUserId}&order=created_at.desc`
+            );
+
+            const container = document.getElementById('withdrawHistory');
+
+            if (!history.length) {
+                container.innerHTML = `
+                <p class="text-zinc-500 text-xs">
+                Sin retiros todavía
+                </p>
+                `;
+                return;
+            }
+
+            container.innerHTML = history.map(item => `
+                <div class="bg-black/30 p-4 rounded-xl">
+                    <div class="flex justify-between">
+                        <span>
+                            ${Number(item.amount).toFixed(5)} TRX
+                        </span>
+                        <span class="${
+                            item.status === 'paid' || item.status === 'approved'
+                            ? 'text-emerald-400'
+                            : item.status === 'rejected'
+                            ? 'text-red-400'
+                            : 'text-amber-400'
+                        }">
+                            ${item.status}
+                        </span>
+                    </div>
+                    <div class="text-xs text-zinc-500 mt-2">
+                        ${new Date(item.created_at).toLocaleString()}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // FUNCIONALIDAD NUEVA #3: TABLERO DE REFERIDOS
+        async function loadReferrals() {
+            if (!telegramUserId) return;
+            const referrals = await supabaseRequest(`users?referred_by=eq.${telegramUserId}&order=created_at.desc`);
+            const container = document.getElementById('referralsList');
+
+            if (!referrals || !referrals.length) {
+                container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">No has invitado a nadie todavía</p>';
+                return;
+            }
+
+            container.innerHTML = referrals.map(user => `
+                <div class="bg-black/40 rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
+                    <div>
+                        <div class="text-sm font-semibold text-white">${user.username || ('user_' + user.telegram_id)}</div>
+                        <div class="text-[10px] text-zinc-500 font-mono">ID: ${user.telegram_id}</div>
+                    </div>
+                    <div class="text-cyan-400 text-xs">Registrado</div>
+                </div>
+            `).join('');
+        }
+
         // =========================
         // BOTTOM NAVIGATION
         // =========================
@@ -643,6 +768,13 @@
 
             // Listener del botón
             mineBtn.addEventListener('click', mine);
+
+            // VINCULACIÓN DE EVENTO EN BOTÓN DE RETIRO EXISTENTE
+            document.getElementById('withdrawBtn').addEventListener('click', requestWithdraw);
+
+            // FUNCIONALIDAD NUEVA #4: INICIALIZACIÓN ASÍNCRONA
+            await loadReferrals();
+            await loadWithdrawHistory();
         }
 
         window.onload = init;
