@@ -844,6 +844,11 @@
         async function spinWheel() {
             if (isSpinning) return;
 
+            // Uso dinámico de la instancia unificada configurada en init()
+            if (!AdController && window.Adsgram) {
+                AdController = window.Adsgram.init({ blockId: "34461", debug: false });
+            }
+
             if (!AdController) {
                 alert("❌ El gestor de anuncios no está listo.");
                 return;
@@ -909,6 +914,7 @@
             } catch (err) {
                 console.warn("Anuncio omitido o con fallas en ruleta:", err);
                 alert("⚠️ Para girar la ruleta debes visualizar completamente el anuncio publicitario.");
+                isSpinning = false;
                 btn.disabled = false;
                 btn.textContent = "VER AD Y GIRAR RULETA";
             }
@@ -995,7 +1001,7 @@
                 if (secondsLeft <= 0) {
                     clearInterval(counter);
                     openBtn.textContent = "Abierto";
-                    claimBtn.disabled = false;
+                    claimBtn.removeAttribute("disabled");
                     claimBtn.classList.remove("bg-zinc-700", "text-zinc-400", "opacity-50", "cursor-not-allowed");
                     claimBtn.classList.add("bg-emerald-500", "text-black", "active:scale-95");
                 } else {
@@ -1126,20 +1132,17 @@
                 const lastCheckinDate = new Date(userRow.last_checkin_at);
                 const now = new Date();
 
-                // Calculamos diferencia en horas continuas completadas
-                const diffTime = now - lastCheckinDate;
+                // Calculamos la diferencia de tiempo precisa
+                const diffTime = now.getTime() - lastCheckinDate.getTime();
                 const diffHours = diffTime / (1000 * 60 * 60);
 
                 if (diffHours < 24) {
-                    // Ya reclamó en las últimas 24 horas continuas
                     canClaimNow = false;
                     streak = userRow.current_streak;
                 } else if (diffHours >= 24 && diffHours < 48) {
-                    // Está en la ventana óptima para mantener su racha intacta
                     streak = userRow.current_streak;
                     canClaimNow = true;
                 } else {
-                    // Ha expirado el tiempo límite para mantener continuidad, racha vuelve a 0
                     streak = 0;
                     canClaimNow = true;
                 }
@@ -1147,11 +1150,11 @@
 
             document.getElementById('dailyStreakCount').textContent = streak;
             
-            // Calculo de premio correspondiente (Racha cíclica de 7 días continuos)
+            // Recompensa en base a racha de 7 días (0 a 6 indexado)
             const rewardIndex = streak % 7;
             const currentRewardValue = dailyRewardsConfig[rewardIndex];
             
-            document.getElementById('nextDailyRewardText').textContent = `Premio del día (Día ${rewardIndex + 1}): ${currentRewardValue} TRX`;
+            document.getElementById('nextDailyRewardText').textContent = `Premio disponible (Día ${rewardIndex + 1}): ${currentRewardValue} TRX`;
 
             const claimBtn = document.getElementById('claimDailyBtn');
             if (!canClaimNow) {
@@ -1177,7 +1180,7 @@
                 const userRow = records[0];
                 const lastCheckinDate = new Date(userRow.last_checkin_at);
                 const now = new Date();
-                const diffHours = (now - lastCheckinDate) / (1000 * 60 * 60);
+                const diffHours = (now.getTime() - lastCheckinDate.getTime()) / (1000 * 60 * 60);
 
                 if (diffHours < 24) {
                     alert("Ya has completado tu check-in de hoy.");
@@ -1185,13 +1188,12 @@
                 } else if (diffHours >= 24 && diffHours < 48) {
                     streak = userRow.current_streak + 1;
                 } else {
-                    streak = 1; // Racha rota, inicia de nuevo en 1
+                    streak = 1; 
                 }
             } else {
-                streak = 1; // Primer check-in histórico de la cuenta
+                streak = 1; 
             }
 
-            // Módulo de recompensa asignado según el día de racha computado
             const rewardIndex = (streak - 1) % 7;
             const rewardAmount = dailyRewardsConfig[rewardIndex];
 
