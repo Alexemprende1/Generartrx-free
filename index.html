@@ -9,171 +9,114 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: #07070c; 
+            font-family: 'Inter', sans-serif; 
+            background: #0a0a0a; 
             color: white; 
-            -webkit-tap-highlight-color: transparent;
         }
-        .glow-cyan { text-shadow: 0 0 20px rgba(6, 182, 212, 0.6); }
-        .glow-card { box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05); }
-        .mining-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .mining-btn:active { transform: scale(0.97); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease-out; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
+        .mining-btn { transition: all 0.3s ease; }
+        .mining-btn:active { transform: scale(0.95); }
+        .balance { font-size: 3rem; font-weight: 700; }
+        .timer { font-size: 2.2rem; font-weight: 700; letter-spacing: 2px; }
         .particle { 
             position: absolute; width: 6px; height: 6px; 
-            background: #06b6d4; border-radius: 50%; 
-            pointer-events: none; animation: particleAnim 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; 
+            background: #00f0ff; border-radius: 50%; 
+            pointer-events: none; animation: particleAnim 1.5s forwards; 
         }
         @keyframes particleAnim { 
             0% { transform: scale(1); opacity: 1; } 
-            100% { transform: scale(0) translateY(-120px) translateX(var(--md-x, 0px)); opacity: 0; } 
+            100% { transform: scale(0) translateY(-100px); opacity: 0; } 
         }
     </style>
 </head>
-<body class="min-h-screen bg-[#07070c] select-none antialiased">
-    <div class="max-w-md mx-auto min-h-screen flex flex-col bg-[#07070c] relative pb-24">
-        
-        <header class="bg-[#0f0f1a]/80 backdrop-blur-md border-b border-zinc-800/50 p-4 sticky top-0 z-50 flex items-center justify-between">
+<body class="min-h-screen bg-[#0a0a0a]">
+    <div class="max-w-md mx-auto bg-gradient-to-b from-[#0a0a0a] to-[#1a1a2e] min-h-screen pb-24 shadow-xl relative">
+        <div class="bg-gradient-to-r from-cyan-500 to-blue-600 p-4 flex items-center justify-between shadow-lg">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                    <i class="fas fa-cube text-white text-sm"></i>
-                </div>
+                <div class="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-2xl text-blue-600 font-bold">💎</div>
                 <div>
-                    <h1 class="text-sm font-bold tracking-wide uppercase text-zinc-200">TRON MINER</h1>
-                    <div class="flex items-center gap-1.5 mt-0.5">
-                        <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                        <span class="text-[10px] text-zinc-400 font-medium">Red Activa (TRC20)</span>
-                    </div>
+                    <h1 class="text-2xl font-bold tron-glow">TRON MINER</h1>
+                    <p class="text-xs text-cyan-100">TRX Mining Bot</p>
                 </div>
             </div>
-            <div class="bg-zinc-900/80 px-3 py-1.5 rounded-full border border-zinc-800 flex items-center gap-2">
-                <span class="text-xs font-semibold text-zinc-300" id="topNavUser">Cargando...</span>
+            <div class="text-right">
+                <div class="flex items-center gap-1 text-xs bg-black/30 px-2 py-1 rounded-full">
+                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span>En línea</span>
+                </div>
             </div>
-        </header>
+        </div>
 
-        <main class="flex-1 p-4 space-y-6">
-            
-            <section id="tab-mining" class="tab-content active space-y-5">
-                <div class="bg-gradient-to-b from-[#121225] to-[#0f0f1a] rounded-3xl p-6 text-center border border-zinc-800/80 glow-card relative overflow-hidden">
-                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl"></div>
-                    <p class="text-zinc-400 text-xs font-bold tracking-widest uppercase">Tu Balance Disponible</p>
-                    <div class="flex items-baseline justify-center gap-2 mt-3">
-                        <div id="balance" class="text-4xl font-extrabold text-white tracking-tight glow-cyan">0.00000</div>
-                        <span class="text-lg font-bold text-cyan-400">TRX</span>
-                    </div>
+        <div class="p-6 space-y-6">
+            <div class="bg-zinc-900/90 rounded-3xl p-8 text-center border border-cyan-500/30 shadow-md">
+                <p class="text-cyan-400 text-sm font-medium tracking-widest">TU BALANCE</p>
+                <div id="balance" class="balance text-white mt-2">0.00000</div>
+                <div class="flex items-center justify-center gap-2 mt-1">
+                    <span class="text-2xl text-cyan-400 font-bold">TRX</span>
                 </div>
+            </div>
 
-                <div class="bg-[#0f0f1a] rounded-3xl p-5 text-center border border-zinc-800/60 glow-card flex items-center justify-between px-6">
-                    <div class="text-left">
-                        <p class="text-zinc-400 text-xs font-semibold">Próxima Recompensa</p>
-                        <p id="timerStatus" class="text-[11px] text-zinc-500 mt-0.5">Reclamos cada 3 minutos</p>
-                    </div>
-                    <div id="timer" class="text-3xl font-black text-emerald-400 font-mono tracking-wider">03:00</div>
+            <div class="bg-zinc-900/80 rounded-3xl p-6 text-center border border-cyan-400/30 shadow-md">
+                <p class="text-cyan-400 text-sm font-medium mb-2">⏳ PRÓXIMA RECOMPENSA</p>
+                <div id="timer" class="timer text-emerald-400">03:00</div>
+                <p id="timerStatus" class="text-xs text-zinc-400 mt-1">Puedes reclamar cada 3 minutos</p>
+            </div>
+
+            <div>
+                <button id="mineBtn" class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-lg py-6 rounded-3xl flex flex-col items-center justify-center shadow-xl shadow-cyan-500/20 disabled:opacity-50 disabled:from-zinc-700 disabled:to-zinc-800">
+                    <i id="mineIcon" class="fas fa-bolt text-3xl mb-2"></i>
+                    <span id="mineText">VER ANUNCIO </span>
+                </button>
+                <p class="text-center text-xs text-zinc-500 mt-3">Recompensa por anuncio: <span class="text-emerald-400 font-bold">0.001 TRX</span></p>
+            </div>
+
+            <div>
+                <button id="referBtn" onclick="copyReferralLink()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-5 rounded-3xl font-bold text-lg flex items-center justify-center gap-3 shadow-lg shadow-purple-600/20">
+                    <i class="fas fa-user-plus"></i> INVITAR AMIGOS
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-zinc-900/70 rounded-2xl p-5 border border-zinc-800">
+                    <p class="text-xs text-zinc-400">Minados hoy</p>
+                    <div id="todayMined" class="text-xl font-bold text-emerald-400 mt-1">0.00000</div>
                 </div>
-
-                <div class="space-y-3">
-                    <button id="mineBtn" class="mining-btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-base py-5 rounded-2xl flex flex-col items-center justify-center shadow-xl shadow-cyan-500/10 disabled:opacity-40 disabled:from-zinc-800 disabled:to-zinc-900 border border-cyan-400/20 disabled:border-transparent">
-                        <i id="mineIcon" class="fas fa-bolt text-xl mb-1.5 text-cyan-200"></i>
-                        <span id="mineText" class="tracking-wide">VER ANUNCIO </span>
-                    </button>
-                    <div class="flex justify-between items-center px-2 text-[11px] text-zinc-500">
-                        <span>Pago por visualización</span>
-                        <span class="text-emerald-400 font-bold">+0.001 TRX</span>
-                    </div>
+                <div class="bg-zinc-900/70 rounded-2xl p-5 border border-zinc-800">
+                    <p class="text-xs text-zinc-400">Total minado</p>
+                    <div id="totalMined" class="text-xl font-bold mt-1">0.00000</div>
                 </div>
+            </div>
 
-                <div class="grid grid-cols-2 gap-3 pt-2">
-                    <div class="bg-[#0f0f1a] rounded-2xl p-4 border border-zinc-800/60">
-                        <p class="text-[11px] text-zinc-400 font-medium">Minados Hoy</p>
-                        <div id="todayMined" class="text-lg font-bold text-emerald-400 mt-1 font-mono">0.00000</div>
-                    </div>
-                    <div class="bg-[#0f0f1a] rounded-2xl p-4 border border-zinc-800/60">
-                        <p class="text-[11px] text-zinc-400 font-medium">Total Histórico</p>
-                        <div id="totalMined" class="text-lg font-bold text-zinc-200 mt-1 font-mono">0.00000</div>
-                    </div>
-                </div>
-            </section>
+            <div class="bg-zinc-900 rounded-3xl p-6 border border-purple-400/30 space-y-3">
+                <h3 class="font-semibold text-lg flex items-center gap-2"><i class="fas fa-users"></i> Mis Referidos</h3>
+                <p class="text-emerald-400 text-sm">Recibe el 15% de tus referidos</p>
+                <div id="referralLink" class="bg-black/50 p-4 rounded-2xl text-xs break-all font-mono border border-zinc-800 select-all text-purple-300">Cargando enlace...</div>
+                <button onclick="copyReferralLink()" class="w-full bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 py-3 rounded-2xl font-medium flex items-center justify-center gap-2 border border-purple-500/30 transition">
+                    <i class="fas fa-copy"></i> Copiar Enlace
+                </button>
+            </div>
 
-            <section id="tab-friends" class="tab-content space-y-5">
-                <div class="bg-gradient-to-b from-[#1a1225] to-[#0f0f1a] rounded-3xl p-6 border border-purple-500/20 glow-card relative overflow-hidden">
-                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl"></div>
-                    <h3 class="font-bold text-lg flex items-center gap-2 text-purple-300"><i class="fas fa-users text-sm"></i> Programa de Referidos</h3>
-                    <p class="text-zinc-400 text-xs mt-2 leading-relaxed">Multiplica tus ganancias compartiendo tu enlace. Recibirás de forma directa el <span class="text-emerald-400 font-bold">15%</span> de cada minado que completen tus invitados.</p>
-                </div>
+            <div class="bg-zinc-900 rounded-3xl p-6 border border-emerald-400/30">
+                <h3 class="font-semibold text-lg flex items-center gap-2 mb-4"><i class="fas fa-gift"></i> Historial de Comisiones</h3>
+                <div id="commissionHistory" class="space-y-3 max-h-48 overflow-y-auto pr-1"></div>
+            </div>
 
-                <div class="bg-[#0f0f1a] rounded-2xl p-4 border border-zinc-800 space-y-3">
-                    <span class="text-xs text-zinc-400 font-medium block">Tu enlace exclusivo de invitación</span>
-                    <div id="referralLink" class="bg-black/40 p-3.5 rounded-xl text-xs break-all font-mono border border-zinc-800/80 text-purple-300 select-all">Cargando enlace...</div>
-                    <button onclick="copyReferralLink()" class="w-full bg-purple-600/10 hover:bg-purple-600/20 text-purple-300 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-purple-500/20 transition active:scale-[0.99]">
-                        <i class="fas fa-copy text-xs"></i> Copiar Enlace
-                    </button>
-                </div>
+            <div class="bg-zinc-900 rounded-3xl p-6 border border-amber-400/30 space-y-4">
+                <h3 class="font-semibold text-lg flex items-center gap-2"><i class="fas fa-wallet"></i> Retirar fondos</h3>
+                <input id="withdrawAddress" type="text" placeholder="Tu dirección TRON (TRC20)" class="w-full bg-black border border-zinc-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-amber-500 text-white">
+                <button id="withdrawBtn" class="w-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 py-4 rounded-2xl font-bold text-lg shadow-lg shadow-amber-500/10 transition">RETIRAR TODO</button>
+            </div>
+        </div>
 
-                <div class="space-y-3">
-                    <h4 class="text-xs font-bold text-zinc-400 tracking-wider uppercase flex items-center gap-2 px-1"><i class="fas fa-gift text-emerald-400"></i> Últimas Comisiones</h4>
-                    <div id="commissionHistory" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
-                </div>
-            </section>
-
-            <section id="tab-wallet" class="tab-content space-y-5">
-                <div class="bg-[#0f0f1a] rounded-3xl p-6 border border-amber-500/20 glow-card space-y-4">
-                    <h3 class="font-bold text-lg flex items-center gap-2 text-amber-400"><i class="fas fa-wallet text-sm"></i> Retiros Seguros</h3>
-                    <p class="text-zinc-400 text-xs leading-relaxed">Asegúrate de ingresar una dirección válida de la red TRON (TRC20). Los procesamientos suelen completarse de manera automática en la blockchain.</p>
-                    
-                    <div class="space-y-1.5">
-                        <label class="text-[11px] text-zinc-400 font-semibold px-1">DIRECCIÓN DE DESTINO</label>
-                        <input id="withdrawAddress" type="text" placeholder="Ej: TY7G8H..." class="w-full bg-black/60 border border-zinc-800 rounded-xl px-4 py-3.5 text-xs font-mono focus:outline-none focus:border-amber-500 text-white placeholder-zinc-600 transition">
-                    </div>
-                    
-                    <button id="withdrawBtn" class="w-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 py-4 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-amber-500/5 transition active:scale-[0.99]">RETIRAR TODO</button>
-                </div>
-
-                <div class="bg-zinc-900/30 rounded-2xl p-4 border border-zinc-800/40 flex gap-3 items-start">
-                    <i class="fas fa-info-circle text-amber-500/70 text-sm mt-0.5"></i>
-                    <p class="text-[11px] text-zinc-500 leading-normal">Los pagos se efectúan al instante directamente al Smart Contract. Verifica siempre tu saldo y dirección antes de ejecutar la transacción.</p>
-                </div>
-            </section>
-
-            <section id="tab-tasks" class="tab-content space-y-4">
-                <div class="bg-zinc-900/30 rounded-3xl p-6 border border-zinc-800/80 text-center space-y-2">
-                    <div class="w-12 h-12 bg-zinc-800/60 rounded-2xl flex items-center justify-center mx-auto text-xl text-zinc-400 mb-2">🚀</div>
-                    <h3 class="font-bold text-zinc-200 text-base">Próximamente más tareas</h3>
-                    <p class="text-zinc-500 text-xs max-w-xs mx-auto">Estamos preparando nuevas misiones y recompensas patrocinadas para acelerar tu minado de TRX.</p>
-                </div>
-            </section>
-
-        </main>
-
-        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0a0a12]/95 backdrop-blur-lg border-t border-zinc-800/80 px-2 py-2 flex items-center justify-around z-50 shadow-2xl">
-            <button onclick="switchTab('mining')" id="nav-mining" class="nav-item flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition text-cyan-400 font-semibold">
-                <i class="fas fa-hammer text-base"></i>
-                <span class="text-[10px] tracking-wide">Minado</span>
-            </button>
-            <button onclick="switchTab('friends')" id="nav-friends" class="nav-item flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition text-zinc-500">
-                <i class="fas fa-users text-base"></i>
-                <span class="text-[10px] tracking-wide">Amigos</span>
-            </button>
-            <button onclick="switchTab('wallet')" id="nav-wallet" class="nav-item flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition text-zinc-500">
-                <i class="fas fa-wallet text-base"></i>
-                <span class="text-[10px] tracking-wide">Billetera</span>
-            </button>
-            <button onclick="switchTab('tasks')" id="nav-tasks" class="nav-item flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition text-zinc-500">
-                <i class="fas fa-tasks text-base"></i>
-                <span class="text-[10px] tracking-wide">Tareas</span>
-            </button>
-        </nav>
+        <div class="absolute bottom-0 left-0 right-0 bg-zinc-950/80 backdrop-blur-md border-t border-zinc-800/60 p-3 text-center text-xs text-zinc-500">
+            TRON Miner • AdsGram + 15% Referidos
+        </div>
     </div>
 
     <script>
-        // === CONFIG (SIN ALTERACIONES) ===
+        // === CONFIG ===
         const SUPABASE_URL = "https://gmyysxuszqwhsbuglvos.supabase.co/rest/v1/";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdteXlzeHVzenF3aHNidWdsdm9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODExOTQsImV4cCI6MjA5NjM1NzE5NH0.C-1TCD8BG-GJtJl6hxJGmo60rqyNee4Q_bsEebRIveQ";
         
@@ -189,7 +132,7 @@
         let AdController = null;
         let timerInterval = null;
 
-        // Elementos UI Mantenidos
+        // Elementos UI
         const balanceEl = document.getElementById('balance');
         const totalMinedEl = document.getElementById('totalMined');
         const todayMinedEl = document.getElementById('todayMined');
@@ -198,23 +141,6 @@
         const mineIcon = document.getElementById('mineIcon');
         const timerEl = document.getElementById('timer');
         const timerStatus = document.getElementById('timerStatus');
-
-        // LÓGICA DE NAVEGACIÓN (NUEVA NUEVA)
-        function switchTab(tabId) {
-            // Ocultar todas las secciones
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            // Desactivar todos los botones de navegación
-            document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('text-cyan-400', 'font-semibold');
-                el.classList.add('text-zinc-500');
-            });
-
-            // Activar pestaña e icono seleccionado
-            document.getElementById(`tab-${tabId}`).classList.add('active');
-            const currentNav = document.getElementById(`nav-${tabId}`);
-            currentNav.classList.remove('text-zinc-500');
-            currentNav.classList.add('text-cyan-400', 'font-semibold');
-        }
 
         async function supabaseRequest(endpoint, method = "GET", body = null) {
             try {
@@ -244,8 +170,6 @@
                 const user = window.Telegram.WebApp.initDataUnsafe?.user;
                 if (user) {
                     telegramUserId = user.id;
-                    // Mostrar username o ID en el Header de forma estética
-                    document.getElementById('topNavUser').textContent = user.username ? `@${user.username}` : `ID: ${user.id}`;
                 }
                 
                 const startParam = window.Telegram.WebApp.initDataUnsafe?.start_param;
@@ -254,9 +178,9 @@
                 }
             }
 
+            // Fallback para desarrollo local si no se abre desde Telegram
             if (!telegramUserId) {
                 telegramUserId = 5002555137; 
-                document.getElementById('topNavUser').textContent = "Local Dev";
             }
 
             if (referredBy == telegramUserId) {
@@ -284,6 +208,7 @@
                     currentUser = newUser;
                 }
 
+                // Incrementar contador del que invitó
                 if (referredBy) {
                     const refUsers = await supabaseRequest(`users?telegram_id=eq.${referredBy}`);
                     if (refUsers && refUsers.length > 0) {
@@ -328,11 +253,10 @@
             for (let i = 0; i < count; i++) {
                 const p = document.createElement('div');
                 p.className = 'particle';
-                p.style.setProperty('--md-x', `${(Math.random() - 0.5) * 80}px`);
                 p.style.left = `${Math.random() * window.innerWidth}px`;
                 p.style.top = `${window.innerHeight * 0.35}px`;
                 document.body.appendChild(p);
-                setTimeout(() => p.remove(), 1200);
+                setTimeout(() => p.remove(), 1500);
             }
         }
 
@@ -340,7 +264,7 @@
             const timeLeft = COOLDOWN - (Date.now() - lastMineTime);
             if (timeLeft <= 0) {
                 timerEl.textContent = "00:00";
-                timerEl.className = "text-3xl font-black text-emerald-400 font-mono tracking-wider animate-pulse";
+                timerEl.className = "timer text-emerald-400 animate-pulse";
                 timerStatus.textContent = "¡Listo para reclamar!";
                 mineBtn.disabled = false;
                 mineText.textContent = "VER ANUNCIO Y RECLAMAR";
@@ -350,7 +274,7 @@
             const minutes = Math.floor(timeLeft / 60000);
             const seconds = Math.floor((timeLeft % 60000) / 1000);
             timerEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-            timerEl.className = "text-3xl font-black text-amber-400 font-mono tracking-wider";
+            timerEl.className = "timer text-amber-400";
             
             mineBtn.disabled = true;
             mineText.textContent = "ESPERA EL CRONÓMETRO";
@@ -370,6 +294,7 @@
             mineIcon.classList.add('fa-spin');
 
             try {
+                // Ejecución del anuncio AdsGram con el nuevo ID 34461
                 await AdController.show();
 
                 const reward = 0.001;
@@ -378,6 +303,7 @@
                 lastMineTime = Date.now();
                 localStorage.setItem('lastMineTime', lastMineTime);
 
+                // SISTEMA DE COMISIÓN DE REFERIDOS (referred_by)
                 if (currentUser && currentUser.referred_by) {
                     const referrerId = currentUser.referred_by;
                     const commission = reward * 0.15;
@@ -387,10 +313,12 @@
                     if (refUsers && refUsers.length > 0) {
                         const refUser = refUsers[0];
 
+                        // Sumar comisión al balance del padrino
                         await supabaseRequest(`users?telegram_id=eq.${referrerId}`, "PATCH", {
                             balance: parseFloat(((refUser.balance || 0) + commission).toFixed(5))
                         });
 
+                        // Guardar log en el historial
                         await supabaseRequest("referral_commissions", "POST", {
                             referrer_id: parseInt(referrerId),
                             referred_user_id: telegramUserId,
@@ -399,6 +327,7 @@
                     }
                 }
 
+                // Guardar datos del usuario actual de manera persistente
                 await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
                     balance: parseFloat(balance.toFixed(5)),
                     total_mined: parseFloat(totalMined.toFixed(5))
@@ -415,7 +344,7 @@
                 console.warn("Anuncio omitido o error:", e);
                 alert("⚠️ Debes ver el anuncio completo para recibir la recompensa.");
                 updateTimer();
-            } finaly {
+            } finally {
                 mineIcon.classList.remove('fa-spin');
             }
         }
@@ -426,37 +355,44 @@
             const container = document.getElementById('commissionHistory');
 
             if (!history || !history.length) {
-                container.innerHTML = '<p class="text-zinc-600 text-xs text-center py-4 bg-zinc-900/10 rounded-2xl border border-zinc-800/40">Sin comisiones aún</p>';
+                container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">Sin comisiones aún</p>';
                 return;
             }
 
             container.innerHTML = history.map(item => `
-                <div class="bg-[#0f0f1a] rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
+                <div class="bg-black/40 rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
                     <div>
-                        <div class="text-xs text-cyan-400 font-mono font-medium">ID: ${item.referred_user_id}</div>
-                        <div class="text-[10px] text-zinc-500 mt-0.5">${new Date(item.created_at).toLocaleString()}</div>
+                        <div class="text-xs text-cyan-300 font-mono">ID: ${item.referred_user_id}</div>
+                        <div class="text-[10px] text-zinc-500">${new Date(item.created_at).toLocaleString()}</div>
                     </div>
-                    <div class="text-emerald-400 font-bold text-xs font-mono">+${Number(item.amount).toFixed(5)} TRX</div>
+                    <div class="text-emerald-400 font-bold text-sm">+${Number(item.amount).toFixed(5)} TRX</div>
                 </div>
             `).join('');
         }
 
         async function init() {
+            // Inicializar usuario desde Telegram / Supabase
             await initUser();
+            
+            // Cargar historial
             await loadCommissionHistory();
 
+            // Inicializar AdsGram correctamente con el nuevo Block ID asignado (34461)
             if (window.Adsgram) {
                 AdController = window.Adsgram.init({ blockId: "34461", debug: false });
             } else {
                 console.error("Adsgram SDK no detectado.");
             }
 
+            // Recuperar tiempo de espera local
             const savedTime = localStorage.getItem('lastMineTime');
             if (savedTime) lastMineTime = parseInt(savedTime);
 
+            // Iniciar Reloj
             updateTimer();
             timerInterval = setInterval(updateTimer, 1000);
 
+            // Listener del botón
             mineBtn.addEventListener('click', mine);
         }
 
