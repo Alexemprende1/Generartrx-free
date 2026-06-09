@@ -348,7 +348,10 @@
 
     </section>
 <section id="screen-games" class="app-screen hidden p-5 space-y-4 pb-12">
-        
+        <div class="bg-black/30 p-2.5 rounded-xl flex justify-between items-center">
+    <span class="text-zinc-400">Éxito:</span>
+    <span id="statsSuccessRate" class="font-semibold text-cyan-400">0%</span>
+</div>
         <div class="grid grid-cols-2 gap-3">
             <div class="bg-[#131c2f] rounded-2xl p-4 border border-cyan-500/20 flex flex-col justify-center items-center text-center energy-glow">
                 <span class="text-zinc-400 text-xs font-medium">⚡ Energía Disponible</span>
@@ -499,8 +502,6 @@
 
         </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0b1120]/95 backdrop-blur-xl border-t border-zinc-800 z-50">
-
         <div class="grid grid-cols-6 h-20">
 
             <button class="nav-btn active" data-screen="mining">
@@ -627,7 +628,8 @@
         // Estado local reactivo de la partida activa
         let arcadeEnergy = MAX_ENERGY;
         let arcadeLastEnergyTime = Date.now();
-        let arcadeShields = 3;
+        let arcadeShields =
+parseInt(localStorage.getItem("arcadeShields") || "3");
         let arcadeLevelConfig = { totalCells: 20, bombsCount: 4, multiplier: 1.0 };
         let arcadeMatrix = []; // Mapa interno de bombas
         let arcadeOpenedCells = [];
@@ -1426,7 +1428,12 @@
             // Renderizado en UI
             document.getElementById('gameEnergyText').textContent = `${arcadeEnergy}/${MAX_ENERGY}`;
             const timerEl = document.getElementById('energyTimerText');
-            const recoverBtn = document.getElementById('recoverEnergyBtn');
+            const recoverBtn =
+document.getElementById('recoverEnergyBtn');
+
+if (recoverBtn) {
+    recoverBtn.classList.remove('hidden');
+}
 
             if (arcadeEnergy < MAX_ENERGY) {
                 const nextRecoveryIn = ENERGY_RECOVERY_COOLDOWN - (now - arcadeLastEnergyTime);
