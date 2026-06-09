@@ -1366,23 +1366,7 @@ const claimBtn = document.getElementById(`btn-claim-${taskId}`);
             // FUNCIONALIDAD NUEVA #4: INICIALIZACIÓN ASÍNCRONA
             await loadReferrals();
             await loadWithdrawHistory();
-
-            // Corrección: usar template strings (`) para interpolar variables correctamente en la URL.
-            async function claimSocialTask(taskId) {
-                try {
-                    const response = await fetch(`/api/claim_social_task?user_id=${telegramUserId}&task_id=${taskId}`);
-                    if (!response.ok) throw new Error('No se pudo reclamar la tarea social');
-                    const data = await response.json();
-                    alert(data.message || '¡Tarea social reclamada exitosamente!');
-                    await loadSocialTasks();
-                } catch (error) {
-                    alert(error.message || 'Error al reclamar la tarea social');
-                }
-            }
     
-
-
-
             // INICIALIZACIONES INTERNAS ADICIONALES PARA LA SECCIÓN DE NUEVAS TAREAS
             drawWheel();
             await loadSpinHistory();
