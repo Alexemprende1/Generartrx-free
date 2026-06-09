@@ -995,30 +995,21 @@
 if(taskId === "monetag_offer") {
 
     show_11119512().then(async () => {
-
-        const reward = 0.01;
-
-        balance += reward;
-
-        await supabaseRequest(
-            `users?telegram_id=eq.${telegramUserId}`,
-            "PATCH",
-            {
-                balance: parseFloat(balance.toFixed(5))
-            }
-        );
-
-        updateUI();
-
-        alert("✅ Has ganado 0.01 TRX");
-
+        
     }).catch(() => {
-
-        alert("⚠️ Debes completar la oferta para recibir la recompensa.");
-
+        
     });
 
     return;
+}
+
+window.open(url, '_blank');
+
+const openBtn = document.getElementById(`btn-open-${taskId}`);
+const claimBtn = document.getElementById(`btn-claim-${taskId}`);
+
+if (!openBtn || !claimBtn) return;
+
 }
 
 // resto de tus tareas normales
@@ -1029,7 +1020,7 @@ const openBtn = document.getElementById(`btn-open-${taskId}`);
 const claimBtn = document.getElementById(`btn-claim-${taskId}`);
 
 
-}
+{
             window.open(url, '_blank');
             const openBtn = document.getElementById(`btn-open-${taskId}`);
             const claimBtn = document.getElementById(`btn-claim-${taskId}`);
