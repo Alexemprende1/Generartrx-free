@@ -461,7 +461,7 @@
     name: "Completar Oferta Monetag",
     url: "#",
     reward: 0.01
-}
+},
             { id: "tg_join", name: "Unirse al canal de Telegram", url: "https://t.me/generartrx2026bot", reward: 0.01 },
             { id: "tiktok_follow", name: "Seguir en TikTok", url: "https://tiktok.com", reward: 0.005 },
             { id: "fb_follow", name: "Seguir en Facebook", url: "https://facebook.com", reward: 0.005 },
@@ -990,30 +990,45 @@
 
         // Flujo del botón Abrir en Tareas de Redes Sociales con contador
         
-       if(taskId === "monetag_offer") {
+        function openSocialTaskLink(taskId, url) {
 
-    show_11119512().then(() => {
+if(taskId === "monetag_offer") {
 
-        console.log("Oferta Monetag completada");
+    show_11119512().then(async () => {
+
+        const reward = 0.01;
+
+        balance += reward;
+
+        await supabaseRequest(
+            `users?telegram_id=eq.${telegramUserId}`,
+            "PATCH",
+            {
+                balance: parseFloat(balance.toFixed(5))
+            }
+        );
+
+        updateUI();
+
+        alert("✅ Has ganado 0.01 TRX");
 
     }).catch(() => {
 
-        console.log("Oferta cancelada");
+        alert("⚠️ Debes completar la oferta para recibir la recompensa.");
 
     });
 
     return;
 }
 
-        console.log("Oferta Monetag completada");
+// resto de tus tareas normales
 
-    }).catch(() => {
+window.open(url, '_blank');
 
-        console.log("Oferta cancelada");
+const openBtn = document.getElementById(`btn-open-${taskId}`);
+const claimBtn = document.getElementById(`btn-claim-${taskId}`);
 
-    });
 
-    return;
 }
             window.open(url, '_blank');
             const openBtn = document.getElementById(`btn-open-${taskId}`);
@@ -1037,7 +1052,7 @@
                     openBtn.textContent = `${secondsLeft}s`;
                 }
             }, 1000);
-        }
+        
 
         // Reclamo efectivo de la recompensa por Tarea Social
         async function claimSocialTask(taskId, rewardAmount) {
@@ -1351,6 +1366,22 @@
             // FUNCIONALIDAD NUEVA #4: INICIALIZACIÓN ASÍNCRONA
             await loadReferrals();
             await loadWithdrawHistory();
+
+            // Corrección: usar template strings (`) para interpolar variables correctamente en la URL.
+            async function claimSocialTask(taskId) {
+                try {
+                    const response = await fetch(`/api/claim_social_task?user_id=${telegramUserId}&task_id=${taskId}`);
+                    if (!response.ok) throw new Error('No se pudo reclamar la tarea social');
+                    const data = await response.json();
+                    alert(data.message || '¡Tarea social reclamada exitosamente!');
+                    await loadSocialTasks();
+                } catch (error) {
+                    alert(error.message || 'Error al reclamar la tarea social');
+                }
+            }
+    
+
+
 
             // INICIALIZACIONES INTERNAS ADICIONALES PARA LA SECCIÓN DE NUEVAS TAREAS
             drawWheel();
