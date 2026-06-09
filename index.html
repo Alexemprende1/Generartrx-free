@@ -844,7 +844,14 @@
         // Ejecuta el flujo y la animación de la ruleta de la suerte
         async function spinWheel() {
     // 1. Verificar si el usuario tiene giros disponibles antes de mostrar el anuncio
+      let spinCount = parseInt(localStorage.getItem('spinCount') || '0');
+const maxSpins = 5;
+
+async function spinWheel() {
     if (spinCount >= maxSpins) {
+        alert("Has alcanzado el límite diario de 5 giros.");
+        return;
+    }
         alert("Has alcanzado el límite diario de giros.");
         return;
     }
