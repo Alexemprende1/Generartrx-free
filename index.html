@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></link>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-    <script src='https://libtl.com/sdk.js' data-zone='11119512' data-sdk='show_11119512'></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { 
@@ -843,58 +842,77 @@
 
         // Ejecuta el flujo y la animación de la ruleta de la suerte
         async function spinWheel() {
-    // 1. Verificar si el usuario tiene giros disponibles antes de mostrar el anuncio
-      let spinCount = parseInt(localStorage.getItem('spinCount') || '0');
-const maxSpins = 5;
+            if (isSpinning) return;
 
-async function spinWheel() {
-    if (spinCount >= maxSpins) {
-        alert("Has alcanzado el límite diario de 5 giros.");
-        return;
-    }
-        alert("Has alcanzado el límite diario de giros.");
-        return;
-    }
+            if (!AdController) {
+                alert("❌ El gestor de anuncios no está listo.");
+                return;
+            }
 
-    try {
-        // 2. Llamar al anuncio Intersticial Recompensado de Monetag
-        show_11119512().then(() => {
-            // Este bloque se ejecuta SOLÓ si el usuario vio el anuncio completo
-            
-            // 3. Otorgar la recompensa de 0.0005 TRX por ver el anuncio
-            let userBalance = parseFloat(localStorage.getItem('balance') || '0');
-            userBalance += 0.0005;
-            localStorage.setItem('balance', userBalance.toFixed(6));
-            
-            // Actualizar el balance en la pantalla si tienes esa función
-            if (typeof updateUI === 'function') updateUI(); 
+            const btn = document.getElementById('spinWheelBtn');
+            btn.disabled = true;
+            btn.textContent = "CARGANDO ANUNCIO...";
 
-            // 4. Ejecutar la animación y lógica visual de la ruleta que ya tenías
-            const wheel = document.getElementById('wheel');
-            const degrees = Math.floor(Math.random() * 360) + 1440; // 4 vueltas mínimo
-            wheel.style.transition = 'transform 4s ease-out';
-            wheel.style.transform = `rotate(${degrees}deg)`;
+            try {
+                // Se invoca obligatoriamente el AdController existente
+                await AdController.show();
+                
+                isSpinning = true;
+                btn.textContent = "¡GIRANDO RULETA!";
 
-            // Registrar el giro en el contador del usuario
-            spinCount++;
-            localStorage.setItem('spinCount', spinCount);
-            updateSpinCounter();
+                const numSegments = wheelRewards.length;
+                const targetIdx = Math.floor(Math.random() * numSegments);
+                const prizeReward = wheelRewards[targetIdx];
 
-            setTimeout(() => {
-                alert("¡Felicidades! Has ganado tu recompensa y tu giro de la ruleta.");
-            }, 4000);
+                // Animación Física/Visual de Rotación
+                const segmentAngleDeg = 360 / numSegments;
+                const canvas = document.getElementById('wheelCanvas');
+                
+                // Calculamos los grados para que caiga en la parte superior del puntero (270deg de desfase estándar)
+                const extraDeg = 270 - (targetIdx * segmentAngleDeg) - (segmentAngleDeg / 2);
+                const totalRotation = (360 * 5) + extraDeg; // 5 vueltas completas de inercia
 
-        }).catch((error) => {
-            // Si el anuncio no se carga o el usuario lo cierra antes de tiempo
-            console.error("Error con el anuncio de Monetag o fue cerrado:", error);
-            alert("Debes ver el anuncio completo para poder girar la ruleta y recibir la recompensa.");
-        });
+                canvas.style.transform = `rotate(${totalRotation}deg)`;
 
-    } catch (error) {
-        console.error("Error en el proceso de la ruleta:", error);
-        alert("Hubo un problema al cargar el anuncio. Inténtalo de nuevo.");
-    }
-}
+                setTimeout(async () => {
+                    // Restablecer transformación limpia sin saltos visuales bruscos
+                    canvas.style.transition = 'none';
+                    canvas.style.transform = `rotate(${extraDeg}deg)`;
+                    setTimeout(() => canvas.style.transition = 'transform 4s cubic-bezier(0.1, 0.8, 0.25, 1)', 50);
+
+                    // Acreditación de Balance
+                    balance += prizeReward;
+                    await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                        balance: parseFloat(balance.toFixed(5))
+                    });
+
+                    // Guardado en la nueva tabla spin_history
+                    await supabaseRequest("spin_history", "POST", {
+                        telegram_id: telegramUserId,
+                        reward: prizeReward
+                    });
+
+                    updateUI();
+                    await loadSpinHistory();
+                    
+                    if (prizeReward > 0) {
+                        alert(`🎁 ¡Felicidades! Has ganado ${prizeReward} TRX`);
+                    } else {
+                        alert("😔 Suerte para la próxima.");
+                    }
+
+                    isSpinning = false;
+                    btn.disabled = false;
+                    btn.textContent = "VER AD Y GIRAR RULETA";
+                }, 4000);
+
+            } catch (err) {
+                console.warn("Anuncio omitido o con fallas en ruleta:", err);
+                alert("⚠️ Para girar la ruleta debes visualizar completamente el anuncio publicitario.");
+                btn.disabled = false;
+                btn.textContent = "VER AD Y GIRAR RULETA";
+            }
+        }
 
         // Carga el historial visual de los giros de ruleta
         async function loadSpinHistory() {
