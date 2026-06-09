@@ -8,6 +8,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></link>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+    <script src='//libtl.com/sdk.js'
+        data-zone='11119512'
+        data-sdk='show_11119512'>
+</script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { 
@@ -452,6 +456,12 @@
         let isSpinning = false;
         
         const staticSocialTasks = [
+            {
+    id: "monetag_offer",
+    name: "Completar Oferta Monetag",
+    url: "#",
+    reward: 0.01
+}
             { id: "tg_join", name: "Unirse al canal de Telegram", url: "https://t.me/generartrx2026bot", reward: 0.01 },
             { id: "tiktok_follow", name: "Seguir en TikTok", url: "https://tiktok.com", reward: 0.005 },
             { id: "fb_follow", name: "Seguir en Facebook", url: "https://facebook.com", reward: 0.005 },
@@ -979,7 +989,32 @@
         }
 
         // Flujo del botón Abrir en Tareas de Redes Sociales con contador
-        function openSocialTaskLink(taskId, url) {
+        
+       if(taskId === "monetag_offer") {
+
+    show_11119512().then(() => {
+
+        console.log("Oferta Monetag completada");
+
+    }).catch(() => {
+
+        console.log("Oferta cancelada");
+
+    });
+
+    return;
+}
+
+        console.log("Oferta Monetag completada");
+
+    }).catch(() => {
+
+        console.log("Oferta cancelada");
+
+    });
+
+    return;
+}
             window.open(url, '_blank');
             const openBtn = document.getElementById(`btn-open-${taskId}`);
             const claimBtn = document.getElementById(`btn-claim-${taskId}`);
