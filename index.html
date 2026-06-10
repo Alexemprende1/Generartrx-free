@@ -12,7 +12,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { 
-            font-family: 'Inter', sans-serif; \n            background: #0a0a0a; 
+            font-family: 'Inter', sans-serif; 
+            background: #0a0a0a; 
             color: white; 
         }
         .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
@@ -506,7 +507,7 @@
             }
         }
 
-        // Función de Inicialización del Usuario Modificada
+        // Función de Inicialización del Usuario
         async function initUser() {
             let referredBy = null;
             let initData = "";
@@ -605,15 +606,18 @@
         }
 
         function updateUI() {
-            if (balanceEl) balanceEl.textContent = balance.toFixed(5);
-            if (totalMinedEl) totalMinedEl.textContent = totalMined.toFixed(5);
-            if (todayMinedEl) todayMinedEl.textContent = (totalMined * 0.4).toFixed(5); 
+            const safeBalance = Number(balance) || 0;
+            const safeTotalMined = Number(totalMined) || 0;
+
+            if (balanceEl) balanceEl.textContent = safeBalance.toFixed(5);
+            if (totalMinedEl) totalMinedEl.textContent = safeTotalMined.toFixed(5);
+            if (todayMinedEl) todayMinedEl.textContent = (safeTotalMined * 0.4).toFixed(5); 
             
             const linkEl = document.getElementById('referralLink');
             if (linkEl) linkEl.textContent = getReferralLink() || "Generando...";
             
             const walletBalance = document.getElementById('walletBalance');
-            if (walletBalance) walletBalance.textContent = balance.toFixed(5);
+            if (walletBalance) walletBalance.textContent = safeBalance.toFixed(5);
 
             const profileUserId = document.getElementById('profileUserId');
             if (profileUserId) profileUserId.textContent = telegramUserId || "---";
@@ -646,7 +650,6 @@
             mineText.textContent = "ESPERA EL CRONÓMETRO";
         }
 
-        // 1. MODIFICADO: LLAMADA BLINDADA A LA EDGE FUNCTION DE MINADO
         async function mine() {
             if (Date.now() - lastMineTime < COOLDOWN) return;
             if (!AdController) {
@@ -679,9 +682,8 @@
                     throw new Error(result.error || "Error en el servidor");
                 }
 
-                // Sincronizar datos devueltos por el backend seguro
-                balance = result.balance;
-                totalMined = result.totalMined;
+                balance = Number(result.balance) || 0;
+                totalMined = Number(result.totalMined) || 0;
                 lastMineTime = Date.now();
                 localStorage.setItem('lastMineTime', lastMineTime);
 
@@ -722,7 +724,6 @@
             }
         }
 
-        // 2. MODIFICADO: SOLICITUD DE RETIROS SEGUROS VÍA EDGE FUNCTION
         async function requestWithdraw() {
             const address = document.getElementById('withdrawAddress').value.trim();
             if (!address) { alert("Ingrese una dirección TRC20"); return; }
@@ -751,7 +752,7 @@
                     throw new Error(result.error || "Retiro rechazado por el servidor.");
                 }
 
-                balance = result.newBalance; // El servidor devolverá 0 si todo sale bien
+                balance = Number(result.newBalance) || 0;
                 updateUI();
                 await loadWithdrawHistory();
                 alert("✅ Solicitud de retiro procesada y guardada correctamente.");
@@ -865,7 +866,7 @@
                     canvas.style.transform = `rotate(${extraDeg}deg)`;
                     setTimeout(() => canvas.style.transition = 'transform 4s cubic-bezier(0.1, 0.8, 0.25, 1)', 50);
 
-                    balance += prizeReward;
+                    balance = Number(balance) + prizeReward;
                     await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
                     await supabaseRequest("spin_history", "POST", { telegram_id: telegramUserId, reward: prizeReward });
 
@@ -961,6 +962,7 @@
                     clearInterval(counter);
                     openBtn.textContent = "Abierto";
                     claimBtn.disabled = false;
+                    // CORREGIDO: Se cambió 'migratory:scale-95' por 'active:scale-95' para evitar romper la UI
                     claimBtn.className = "bg-emerald-500 text-black text-[11px] px-3 py-1.5 rounded-xl font-semibold transition active:scale-95";
                 } else {
                     openBtn.textContent = `${secondsLeft}s`;
@@ -970,7 +972,7 @@
 
         async function claimSocialTask(taskId, rewardAmount) {
             await supabaseRequest("social_tasks_completed", "POST", { telegram_id: telegramUserId, task_id: taskId, reward: rewardAmount });
-            balance += rewardAmount;
+            balance = Number(balance) + rewardAmount;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
             updateUI();
             alert(`✅ Recompensa de ${rewardAmount} TRX añadida.`);
@@ -1025,7 +1027,6 @@
             }
         }
 
-        // 3. MODIFICADO: VALIDACIÓN SEGURA DE METAS DE REFERIDOS VÍA EDGE FUNCTION
         async function claimMilestoneBonus(milestoneId, reward) {
             try {
                 const response = await fetch(`${SUPABASE_BASE_URL}functions/v1/claim-referral-commission`, {
@@ -1048,7 +1049,7 @@
                     throw new Error(result.error || "No se pudo reclamar.");
                 }
 
-                balance = result.balance;
+                balance = Number(result.balance) || 0;
                 updateUI();
                 alert(`🎉 ¡Bono de ${reward} TRX cobrado con éxito en el servidor!`);
                 await loadReferralMilestones();
@@ -1117,7 +1118,7 @@
                 await supabaseRequest("daily_checkin", "POST", { telegram_id: telegramUserId, current_streak: streak, last_checkin_at: new Date().toISOString() });
             }
 
-            balance += rewardAmount;
+            balance = Number(balance) + rewardAmount;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
             updateUI();
             alert(`📆 Check-In exitoso: +${rewardAmount} TRX.`);
@@ -1294,7 +1295,7 @@
             if (!isMinesGameActive || minesCurrentAccumulatedReward <= 0) return;
 
             const finalReward = parseFloat(minesCurrentAccumulatedReward.toFixed(5));
-            balance += finalReward;
+            balance = Number(balance) + finalReward;
 
             await supabaseRequest("mines_history", "POST", {
                 telegram_id: telegramUserId,
@@ -1389,16 +1390,21 @@
             }
         }
 
+        // FUNCIÓN DE INTERCAMBIO DE PESTAÑAS (OPTIMIZADA)
         function switchScreen(screen) {
+            // Ocultar todas las secciones
             document.querySelectorAll('.app-screen').forEach(el => el.classList.add('hidden'));
+            // Quitar estado activo de todos los botones
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
 
+            // Mostrar sección objetivo
             const targetScreen = document.getElementById(`screen-${screen}`);
             const targetBtn = document.querySelector(`[data-screen="${screen}"]`);
             
             if (targetScreen) targetScreen.classList.remove('hidden');
             if (targetBtn) targetBtn.classList.add('active');
 
+            // Carga dinámica de datos de manera limpia al cambiar de pestaña
             if (screen === 'tasks') {
                 setTimeout(drawWheel, 50);
                 loadSocialTasks();
@@ -1417,14 +1423,16 @@
             }
         }
 
+        // Vinculación de eventos de navegación segura
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
+                btn.onclick = (e) => {
                     e.preventDefault();
-                    if (btn.dataset.screen) {
-                        switchScreen(btn.dataset.screen);
+                    const screenName = btn.getAttribute('data-screen');
+                    if (screenName) {
+                        switchScreen(screenName);
                     }
-                });
+                };
             });
         });
 
