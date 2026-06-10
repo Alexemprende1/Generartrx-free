@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -41,7 +42,6 @@
             display: none !important;
         }
 
-        /* Corrección de la barra inferior congelada */
         .nav-container {
             display: flex;
             align-items: center;
@@ -317,6 +317,15 @@
             <button id="startMinesGameBtn" class="w-full py-4 rounded-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 text-black text-md transition active:scale-95 shadow-lg shadow-cyan-500/10">
                 INICIAR PARTIDA (-1 ENERGÍA)
             </button>
+            
+            <div class="bg-black/20 p-4 rounded-2xl border border-zinc-800">
+                <h4 class="text-xs font-bold text-zinc-400 uppercase mb-3 flex items-center gap-1.5">
+                    <i class="fas fa-history text-purple-400"></i> Auditoría de Partidas Recientes
+                </h4>
+                <div id="minesHistoryList" class="space-y-2 max-h-[160px] overflow-y-auto text-xs">
+                    <p class="text-zinc-500 italic text-center py-2">No hay partidas registradas</p>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -459,9 +468,7 @@
 
         const dailyRewardsConfig = [0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.01];
 
-        // ==================================================
-        // VARIABLES DEL JUEGO BUSCAMINAS CON MULTIPLICADORES
-        // ==================================================
+        // === VARIABLES BUSCAMINAS ===
         let minesEnergy = 6;
         let lastEnergyRefillTime = Date.now();
         let currentMinesLevel = 'easy'; 
@@ -470,7 +477,6 @@
         let revealedCellsCount = 0;
         let minesCurrentAccumulatedReward = 0;
 
-        // Configuración matemática avanzada y progresiva por nivel
         const minesLevelsConfig = {
             easy: { bombs: 3, baseRewardPerCell: 0.0002, multiplierStep: 0.10 },
             medium: { bombs: 6, baseRewardPerCell: 0.0005, multiplierStep: 0.20 },
@@ -542,8 +548,9 @@
             }
 
             if (currentUser) {
-                balance = currentUser.balance || 0;
-                totalMined = currentUser.total_mined || 0;
+                // Forzar conversión a flotante para evitar errores visuales
+                balance = parseFloat(currentUser.balance) || 0;
+                totalMined = parseFloat(currentUser.total_mined) || 0;
             }
             updateUI();
         }
@@ -563,11 +570,12 @@
         }
 
         function updateUI() {
-            balanceEl.textContent = balance.toFixed(5);
-            totalMinedEl.textContent = totalMined.toFixed(5);
-            todayMinedEl.textContent = (totalMined * 0.4).toFixed(5); 
+            if (balanceEl) balanceEl.textContent = balance.toFixed(5);
+            if (totalMinedEl) totalMinedEl.textContent = totalMined.toFixed(5);
+            if (todayMinedEl) todayMinedEl.textContent = (totalMined * 0.4).toFixed(5); 
+            
             const linkEl = document.getElementById('referralLink');
-            if(linkEl) linkEl.textContent = getReferralLink() || "Generando...";
+            if (linkEl) linkEl.textContent = getReferralLink() || "Generando...";
             
             const walletBalance = document.getElementById('walletBalance');
             if (walletBalance) walletBalance.textContent = balance.toFixed(5);
@@ -694,7 +702,7 @@
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: 0 });
             updateUI();
             await loadWithdrawHistory();
-            alert("✅ Solicitud enviada correctamente");
+            alert("✅ Solicitud de retiro enviada correctamente.");
         }
 
         async function loadWithdrawHistory() {
@@ -702,7 +710,7 @@
             const container = document.getElementById('withdrawHistory');
             if (!container) return;
             if (!history || !history.length) {
-                container.innerHTML = `<p class="text-zinc-500 text-xs">Sin retiros todavía</p>`;
+                container.innerHTML = `<p class="text-zinc-500 text-xs text-center py-2">Sin retiros todavía</p>`;
                 return;
             }
             container.innerHTML = history.map(item => `
@@ -736,9 +744,7 @@
             `).join('');
         }
 
-        // ==================================================
-        // RULETA Y OTROS CONTROLES ADSCRAM
-        // ==================================================
+        // === CONTROLES DE LA RULETA ===
         function drawWheel() {
             const canvas = document.getElementById('wheelCanvas');
             if (!canvas) return;
@@ -906,7 +912,7 @@
             const rawRefs = await supabaseRequest(`users?referred_by=eq.${telegramUserId}`);
             const countRefs = rawRefs ? rawRefs.length : 0;
             
-            if(document.getElementById('milestonesCurrentRefs')) {
+            if (document.getElementById('milestonesCurrentRefs')) {
                 document.getElementById('milestonesCurrentRefs').textContent = countRefs;
             }
 
@@ -968,11 +974,11 @@
             }
 
             const countEl = document.getElementById('dailyStreakCount');
-            if(countEl) countEl.textContent = streak;
+            if (countEl) countEl.textContent = streak;
             
             const rewardIndex = streak % 7;
             const currentRewardValue = dailyRewardsConfig[rewardIndex];
-            if(document.getElementById('nextDailyRewardText')) {
+            if (document.getElementById('nextDailyRewardText')) {
                 document.getElementById('nextDailyRewardText').textContent = `Premio del día (Día ${rewardIndex + 1}): ${currentRewardValue} TRX`;
             }
 
@@ -1017,9 +1023,7 @@
             await loadDailyCheckIn();
         }
 
-        // ==========================================================
-        // SISTEMA COMPLETO DE BUSCAMINAS: NIVELES Y MULTIPLICADORES
-        // ==========================================================
+        // === SISTEMA DE BUSCAMINAS AUDITADO ===
         function updateMinesEnergySystem() {
             const savedEnergy = localStorage.getItem('minesEnergy');
             const savedTime = localStorage.getItem('lastEnergyRefillTime');
@@ -1037,20 +1041,22 @@
                 localStorage.setItem('lastEnergyRefillTime', lastEnergyRefillTime);
             }
 
-            document.getElementById('minesEnergyText').textContent = `${minesEnergy} / 6`;
+            const energyText = document.getElementById('minesEnergyText');
+            if (energyText) energyText.textContent = `${minesEnergy} / 6`;
 
             const timerText = document.getElementById('energyNextRefill');
-            if (minesEnergy >= 6) {
-                timerText.textContent = "Energía al máximo";
-            } else {
-                const remainingMs = (lastEnergyRefillTime + (3600 * 1000)) - now;
-                const min = Math.max(0, Math.floor(remainingMs / 60000));
-                const sec = Math.max(0, Math.floor((remainingMs % 60000) / 1000));
-                timerText.textContent = `Siguiente carga en: ${min}:${sec < 10 ? '0' : ''}${sec}`;
+            if (timerText) {
+                if (minesEnergy >= 6) {
+                    timerText.textContent = "Energía al máximo";
+                } else {
+                    const remainingMs = (lastEnergyRefillTime + (3600 * 1000)) - now;
+                    const min = Math.max(0, Math.floor(remainingMs / 60000));
+                    const sec = Math.max(0, Math.floor((remainingMs % 60000) / 1000));
+                    timerText.textContent = `Siguiente carga en: ${min}:${sec < 10 ? '0' : ''}${sec}`;
+                }
             }
         }
 
-        // Botón de Monetag corregido e integrado profesionalmente
         function watchMonetagAdForEnergy() {
             const btn = document.getElementById('refillEnergyBtn');
             btn.disabled = true;
@@ -1098,6 +1104,7 @@
 
         function renderEmptyBoard() {
             const board = document.getElementById('minesBoard');
+            if (!board) return;
             board.innerHTML = '';
             for (let i = 0; i < 20; i++) {
                 const cell = document.createElement('div');
@@ -1125,9 +1132,8 @@
             
             const config = minesLevelsConfig[currentMinesLevel];
 
-            // Generar mapa oculto de 20 casillas
             minesBoardData = [];
-            for(let i=0; i<20; i++) { minesBoardData.push({ isBomb: false, revealed: false }); }
+            for (let i=0; i<20; i++) { minesBoardData.push({ isBomb: false, revealed: false }); }
             
             let bombsPlaced = 0;
             while (bombsPlaced < config.bombs) {
@@ -1162,14 +1168,12 @@
             if (minesBoardData[index].isBomb) {
                 cellElement.className = 'mine-cell revealed-bomb';
                 cellElement.innerHTML = '<i class="fas fa-bomb"></i>';
-                endMinesGame(false);
+                await endMinesGame(false); 
             } else {
                 revealedCellsCount++;
                 cellElement.className = 'mine-cell revealed-safe';
                 cellElement.innerHTML = '<i class="fas fa-gem"></i>';
 
-                // FÓRMULA DE RECOMPENSA Y MULTIPLICACIÓN PROGRESIVA REQUERIDA
-                // Cada casilla consecutiva exitosa aumenta el premio base escalado por el multiplicador del nivel.
                 let currentTurnMultiplier = 1 + (revealedCellsCount * config.multiplierStep);
                 minesCurrentAccumulatedReward += (config.baseRewardPerCell * currentTurnMultiplier);
                 
@@ -1189,34 +1193,58 @@
         async function cashoutMinesReward() {
             if (!isMinesGameActive || minesCurrentAccumulatedReward <= 0) return;
 
-            balance += minesCurrentAccumulatedReward;
+            const finalReward = parseFloat(minesCurrentAccumulatedReward.toFixed(5));
+            balance += finalReward;
+
+            // 1. Guardar auditoría de victoria en 'mines_history'
+            await supabaseRequest("mines_history", "POST", {
+                telegram_id: telegramUserId,
+                level: currentMinesLevel,
+                revealed_cells: revealedCellsCount,
+                reward: finalReward,
+                status: "win"
+            });
+
+            // 2. Acreditar y sincronizar balance en la cuenta principal de Supabase
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
                 balance: parseFloat(balance.toFixed(5))
             });
 
-            alert(`💰 ¡Excelente! Cobraste +${minesCurrentAccumulatedReward.toFixed(5)} TRX seguros.`);
+            alert(`💰 ¡Excelente! Cobraste +${finalReward.toFixed(5)} TRX directos a tu billetera.`);
             updateUI();
-            endMinesGame(true);
+            await endMinesGame(true);
         }
 
-        function endMinesGame(isWin) {
+        async function endMinesGame(isWin) {
             isMinesGameActive = false;
-            const board = document.getElementById('minesBoard');
-            board.innerHTML = '';
-            
-            minesBoardData.forEach((cellInfo) => {
-                const cell = document.createElement('div');
-                if (cellInfo.isBomb) {
-                    cell.className = 'mine-cell revealed-bomb';
-                    cell.innerHTML = '<i class="fas fa-bomb"></i>';
-                } else {
-                    cell.className = 'mine-cell revealed-safe';
-                    cell.innerHTML = cellInfo.revealed ? '<i class="fas fa-gem"></i>' : '';
-                }
-                board.appendChild(cell);
-            });
 
-            if (!isWin) alert("💥 ¡BOOM! Tocaste una bomba. Perdiste el acumulado de esta ronda.");
+            if (!isWin) {
+                // Si pisa bomba, se manda la auditoría con 0 de ganancia y no altera el balance principal
+                await supabaseRequest("mines_history", "POST", {
+                    telegram_id: telegramUserId,
+                    level: currentMinesLevel,
+                    revealed_cells: revealedCellsCount,
+                    reward: 0,
+                    status: "explosion"
+                });
+                alert("💥 ¡BOOM! Tocaste una bomba. Perdiste el acumulado de esta ronda.");
+            }
+
+            const board = document.getElementById('minesBoard');
+            if (board) {
+                board.innerHTML = '';
+                minesBoardData.forEach((cellInfo) => {
+                    const cell = document.createElement('div');
+                    if (cellInfo.isBomb) {
+                        cell.className = 'mine-cell revealed-bomb';
+                        cell.innerHTML = '<i class="fas fa-bomb"></i>';
+                    } else {
+                        cell.className = 'mine-cell revealed-safe';
+                        cell.innerHTML = cellInfo.revealed ? '<i class="fas fa-gem"></i>' : '';
+                    }
+                    board.appendChild(cell);
+                });
+            }
 
             document.getElementById('startMinesGameBtn').disabled = false;
             document.getElementById('startMinesGameBtn').textContent = "INICIAR PARTIDA (-1 ENERGÍA)";
@@ -1224,11 +1252,45 @@
             const cashoutBtn = document.getElementById('minesCashoutBtn');
             cashoutBtn.disabled = true;
             cashoutBtn.className = "bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl font-bold opacity-50 cursor-not-allowed transition";
+
+            // Refrescar el historial de auditoría
+            await loadMinesHistory();
         }
 
-        // =========================
-        // NAVEGACIÓN ENTRE PESTAÑAS
-        // =========================
+        async function loadMinesHistory() {
+            if (!telegramUserId) return;
+            const history = await supabaseRequest(`mines_history?telegram_id=eq.${telegramUserId}&order=created_at.desc&limit=6`);
+            const container = document.getElementById('minesHistoryList');
+            if (!container) return;
+
+            if (!history || !history.length) {
+                container.innerHTML = '<p class="text-zinc-500 italic text-center py-2">No hay partidas registradas</p>';
+                return;
+            }
+
+            container.innerHTML = history.map(item => {
+                const isWin = item.status === 'win';
+                const levelNames = { easy: 'Fácil', medium: 'Medio', hard: 'Difícil', expert: 'Experto' };
+                return `
+                    <div class="bg-black/40 rounded-xl p-2.5 flex justify-between items-center border border-zinc-800/60">
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-semibold text-white">${levelNames[item.level] || item.level}</span>
+                                <span class="text-[10px] text-zinc-500 font-medium">(${item.revealed_cells} gemas)</span>
+                            </div>
+                            <div class="text-[9px] text-zinc-500">${new Date(item.created_at).toLocaleTimeString()}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="${isWin ? 'text-emerald-400 font-bold' : 'text-red-400 font-semibold'}">
+                                ${isWin ? '+' + Number(item.reward).toFixed(5) + ' TRX' : '💥 0 TRX'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // === NAVEGACIÓN COMPLETA ENTRE PESTAÑAS (REPARADO) ===
         function switchScreen(screen) {
             document.querySelectorAll('.app-screen').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -1236,12 +1298,14 @@
             const targetScreen = document.getElementById(`screen-${screen}`);
             const targetBtn = document.querySelector(`[data-screen="${screen}"]`);
             
-            if(targetScreen) targetScreen.classList.remove('hidden');
-            if(targetBtn) targetBtn.classList.add('active');
+            if (targetScreen) targetScreen.classList.remove('hidden');
+            if (targetBtn) targetBtn.classList.add('active');
 
             if (screen === 'tasks') setTimeout(drawWheel, 150);
+            if (screen === 'mines') loadMinesHistory();
         }
 
+        // Inicializador Global de Eventos de Navegación Dom
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -1251,6 +1315,7 @@
         });
 
         async function init() {
+            // 1. Cargar datos del usuario e igualar balances con base de datos
             await initUser();
             await loadCommissionHistory();
 
@@ -1271,7 +1336,7 @@
             await loadReferrals();
             await loadWithdrawHistory();
 
-            // Tareas e Incentivos iniciales
+            // Cargar e Inicializar Incentivos Adicionales
             drawWheel();
             await loadSpinHistory();
             await loadSocialTasks();
@@ -1281,9 +1346,10 @@
             document.getElementById('spinWheelBtn').addEventListener('click', spinWheel);
             document.getElementById('claimDailyBtn').addEventListener('click', executeDailyCheckIn);
 
-            // Buscaminas
+            // Cargar componentes del Buscaminas
             renderEmptyBoard();
             updateMinesEnergySystem();
+            await loadMinesHistory();
             document.getElementById('refillEnergyBtn').addEventListener('click', watchMonetagAdForEnergy);
             document.getElementById('startMinesGameBtn').addEventListener('click', initMinesGame);
             document.getElementById('minesCashoutBtn').addEventListener('click', cashoutMinesReward);
