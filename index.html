@@ -507,7 +507,7 @@
             }
         }
 
-        // Función de Inicialización del Usuario - CORREGIDA CON ESPERA TOTAL
+        // Función de Inicialización del Usuario - MODIFICADA PARA TRABAJAR CON EL RPC DE REFERIDOS
         async function initUser() {
             let referredBy = null;
             let initData = "";
@@ -566,10 +566,29 @@
                 currentUser = (created && created.length > 0) ? created[0] : newUser;
 
                 if (referredBy) {
-                    const refUsers = await supabaseRequest(`users?telegram_id=eq.${referredBy}`);
+                    const invitadorId = parseInt(referredBy);
+
+                    // 1. LLAMADA RPC: Ejecutamos de forma segura la función creada en tu SQL de Supabase
+                    await supabaseRequest("rpc/incrementar_referido", "POST", {
+                        invitador_id: invitadorId
+                    });
+
+                    // 2. RECOMPENSA DE GANANCIAS: Otorgamos un bono al invitador (por ejemplo, 0.05 TRX)
+                    const bonoComision = 0.05000;
+
+                    // 3. REGISTRO EN EL HISTORIAL: Insertamos la transacción para que aparezca en la pestaña "Amigos"
+                    await supabaseRequest("referral_commissions", "POST", {
+                        referrer_id: invitadorId,
+                        referred_user_id: telegramUserId,
+                        amount: bonoComision
+                    });
+
+                    // 4. ACTUALIZACIÓN DEL BALANCE: Sumamos la comisión directamente al saldo del invitador
+                    const refUsers = await supabaseRequest(`users?telegram_id=eq.${invitadorId}`);
                     if (refUsers && refUsers.length > 0) {
-                        await supabaseRequest(`users?telegram_id=eq.${referredBy}`, "PATCH", {
-                            referrals_count: (refUsers[0].referrals_count || 0) + 1
+                        const nuevoBalance = (parseFloat(refUsers[0].balance) || 0) + bonoComision;
+                        await supabaseRequest(`users?telegram_id=eq.${invitadorId}`, "PATCH", {
+                            balance: parseFloat(nuevoBalance.toFixed(5))
                         });
                     }
                 }
@@ -1135,7 +1154,7 @@
             balance = Number(balance) + rewardAmount;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
             updateUI();
-            alert(`📆 Check-In exitoso: +${rewardAmount} TRX.`);
+            alert(`@📆 Check-In exitoso: +${rewardAmount} TRX.`);
             await loadDailyCheckIn();
         }
 
