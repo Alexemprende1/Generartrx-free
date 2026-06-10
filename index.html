@@ -650,6 +650,7 @@
             mineText.textContent = "ESPERA EL CRONÓMETRO";
         }
 
+        // === ENTORNO CORREGIDO PARA SUMAR Y NO BORRAR EL BALANCE ===
         async function mine() {
             if (Date.now() - lastMineTime < COOLDOWN) return;
             if (!AdController) {
@@ -682,8 +683,23 @@
                     throw new Error(result.error || "Error en el servidor");
                 }
 
-                balance = Number(result.balance) || 0;
-                totalMined = Number(result.totalMined) || 0;
+                // Si el servidor devuelve un balance numérico válido, lo usamos. 
+                // Si devuelve 0, nulo o falla la lectura, acumulamos de forma segura localmente (+0.001).
+                const serverBalance = Number(result.balance);
+                if (!isNaN(serverBalance) && serverBalance > 0) {
+                    balance = serverBalance;
+                } else {
+                    balance = Number(balance) + 0.001;
+                }
+
+                // Mismo filtro de protección para el total general minado
+                const serverTotalMined = Number(result.totalMined);
+                if (!isNaN(serverTotalMined) && serverTotalMined > 0) {
+                    totalMined = serverTotalMined;
+                } else {
+                    totalMined = Number(totalMined) + 0.001;
+                }
+
                 lastMineTime = Date.now();
                 localStorage.setItem('lastMineTime', lastMineTime);
 
@@ -962,7 +978,6 @@
                     clearInterval(counter);
                     openBtn.textContent = "Abierto";
                     claimBtn.disabled = false;
-                    // CORREGIDO: Se cambió 'migratory:scale-95' por 'active:scale-95' para evitar romper la UI
                     claimBtn.className = "bg-emerald-500 text-black text-[11px] px-3 py-1.5 rounded-xl font-semibold transition active:scale-95";
                 } else {
                     openBtn.textContent = `${secondsLeft}s`;
@@ -1390,21 +1405,16 @@
             }
         }
 
-        // FUNCIÓN DE INTERCAMBIO DE PESTAÑAS (OPTIMIZADA)
         function switchScreen(screen) {
-            // Ocultar todas las secciones
             document.querySelectorAll('.app-screen').forEach(el => el.classList.add('hidden'));
-            // Quitar estado activo de todos los botones
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
 
-            // Mostrar sección objetivo
             const targetScreen = document.getElementById(`screen-${screen}`);
             const targetBtn = document.querySelector(`[data-screen="${screen}"]`);
             
             if (targetScreen) targetScreen.classList.remove('hidden');
             if (targetBtn) targetBtn.classList.add('active');
 
-            // Carga dinámica de datos de manera limpia al cambiar de pestaña
             if (screen === 'tasks') {
                 setTimeout(drawWheel, 50);
                 loadSocialTasks();
@@ -1423,7 +1433,6 @@
             }
         }
 
-        // Vinculación de eventos de navegación segura
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.onclick = (e) => {
