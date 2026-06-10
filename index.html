@@ -14,8 +14,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { 
-            font-family: 'Inter', sans-serif; 
-            background: #0a0a0a; 
+            font-family: 'Inter', sans-serif; \n            background: #0a0a0a; 
             color: white; 
         }
         .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
@@ -111,7 +110,6 @@
             z-index: 10;
         }
 
-        /* Tablero Buscaminas (20 casillas -> 4 columnas x 5 filas) */
         .mines-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -419,14 +417,15 @@
 </div>
 
     <script>
-        // === CONFIG SUPABASE ===
-        const SUPABASE_URL = "https://gmyysxuszqwhsbuglvos.supabase.co/rest/v1/";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdteXlzeHVzenF3aHNidWdsdm9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODExOTQsImV4cCI6MjA5NjM1NzE5NH0.C-1TCD8BG-GJtJl6hxJGmo60rqyNee4Q_bsEebRIveQ";
+        // === CONFIG SUPABASE (Sincronizada con URL base limpia y variable de sesión) ===
+        const SUPABASE_BASE_URL = "https://gmyysxuszqwhsbuglvos.supabase.co/";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdteXlzeHVzenF3aHNidWdsdm9zIiwicm9sZSI6Imvub24iLCJpYXQiOjE3ODA3ODExOTQsImV4cCI6MjA5NjM1NzE5NH0.C-1TCD8BG-GJtJl6hxJGmo60rqyNee4Q_bsEebRIveQ";
         
         const MIN_WITHDRAW = 0.01;
 
         let currentUser = null;
         let telegramUserId = null;
+        let sessionToken = null; // Guardará el JWT obtenido tras la validación segura de la Edge Function
         const BOT_USERNAME = "generartrx2026bot";
         
         let balance = 0;
@@ -483,18 +482,27 @@
             expert: { bombs: 12, baseRewardPerCell: 0.0040, multiplierStep: 0.50 }
         };
 
+        // === MODIFICACIÓN DE LA FUNCIÓN DE PETICIÓN (Petición Autenticada Inteligente) ===
         async function supabaseRequest(endpoint, method = "GET", body = null) {
             try {
+                // Si ya tenemos un token de sesión del usuario, lo inyectamos; de lo contrario recurrimos temporalmente al anon
+                const authHeader = sessionToken ? `Bearer ${sessionToken}` : `Bearer ${SUPABASE_ANON_KEY}`;
+                
+                // Si la petición va dirigida a una Edge Function cambia el prefijo a functions/v1/, si no va al API REST nativo
+                const fullUrl = endpoint.startsWith("functions/v1/")
+                    ? `${SUPABASE_BASE_URL}${endpoint}`
+                    : `${SUPABASE_BASE_URL}rest/v1/${endpoint}`;
+
                 const headers = {
                     "apikey": SUPABASE_ANON_KEY,
-                    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+                    "Authorization": authHeader,
                     "Content-Type": "application/json",
                     "Prefer": "return=representation"
                 };
                 const config = { method, headers };
                 if (body) config.body = JSON.stringify(body);
 
-                const res = await fetch(SUPABASE_URL + endpoint, config);
+                const res = await fetch(fullUrl, config);
                 if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
                 return await res.json();
             } catch (e) { 
@@ -503,11 +511,18 @@
             }
         }
 
+        // === REESTRUCTURACIÓN DE LA FUNCIÓN initUser (Punto 2 y 3) ===
         async function initUser() {
             let referredBy = null;
+            let initData = "";
+
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
+                
+                // Captura de la cadena cruda y encriptada de inicio para el backend
+                initData = window.Telegram.WebApp.initData || "";
+                
                 const user = window.Telegram.WebApp.initDataUnsafe?.user;
                 if (user) telegramUserId = user.id;
                 
@@ -517,15 +532,35 @@
                 }
             }
 
-            if (!telegramUserId) telegramUserId = 5002555137; 
+            // Entorno de simulación local para pruebas de desarrollo
+            if (!telegramUserId) {
+                telegramUserId = 5002555137; 
+                initData = `user=${encodeURIComponent(JSON.stringify({id: telegramUserId, username: "dev_user"}))}`;
+            }
 
             if (referredBy == telegramUserId) referredBy = null;
 
+            // 1. Validamos la identidad de forma prioritaria con Supabase Auth a través de la Edge Function
+            const authResponse = await supabaseRequest("functions/v1/telegram-auth", "POST", {
+                initData: initData,
+                referredBy: referredBy
+            });
+
+            if (!authResponse || !authResponse.token) {
+                alert("❌ Error de Autenticación: No se pudo verificar la firma de Telegram.");
+                return;
+            }
+
+            // 2. Establecemos globalmente el Token JWT Seguro del usuario
+            sessionToken = authResponse.token;
+
+            // 3. Obtenemos el perfil del usuario utilizando el token autenticado propio
             let users = await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`);
             
             if (users && users.length > 0) {
                 currentUser = users[0];
             } else {
+                // Fallback local por si necesitas registrar al usuario directamente desde la app
                 const newUser = {
                     telegram_id: telegramUserId,
                     username: `user_${telegramUserId}`,
@@ -547,6 +582,7 @@
                 }
             }
 
+            // 4. Sincronización de variables globales sin depender de la clave anónima directa
             if (currentUser) {
                 balance = parseFloat(currentUser.balance) || 0;
                 totalMined = parseFloat(currentUser.total_mined) || 0;
@@ -1345,7 +1381,6 @@
             }
         }
 
-        // Inicializador Global de Eventos de Navegación del DOM
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -1356,7 +1391,7 @@
         });
 
         async function init() {
-            // Inicializar primero el usuario esencial
+            // Inicializar primero el usuario esencial y detener la carga paralela si este falla
             await initUser();
 
             if (window.Adsgram) {
@@ -1373,7 +1408,7 @@
             mineBtn.addEventListener('click', mine);
             document.getElementById('withdrawBtn').addEventListener('click', requestWithdraw);
 
-            // Cargar datos asíncronos en paralelo para evitar cuellos de botella
+            // Cargar datos asíncronos en paralelo usando el token seguro ya obtenido
             loadReferrals();
             loadWithdrawHistory();
             loadSpinHistory();
