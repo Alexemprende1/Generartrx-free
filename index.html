@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></link>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+    
     <script src='//libtl.com/sdk.js' data-zone='11119512' data-sdk='show_11119512'></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { 
@@ -32,14 +34,25 @@
         }
 
         .app-screen {
-            min-height: calc(100vh - 150px);
+            min-height: calc(100vh - 160px);
         }
 
         .hidden {
-            display: none;
+            display: none !important;
+        }
+
+        /* Corrección de la barra inferior congelada */
+        .nav-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            height: 76px;
+            padding: 0 8px;
         }
 
         .nav-btn {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -47,7 +60,11 @@
             gap: 4px;
             color: #71717a;
             font-size: 10px;
-            transition: all 0.25s ease;
+            transition: all 0.2s ease;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            min-width: 0;
         }
 
         .nav-btn i {
@@ -60,10 +77,6 @@
 
         .nav-btn.active i {
             transform: translateY(-2px);
-        }
-
-        .nav-btn:active {
-            transform: scale(0.96);
         }
 
         input::placeholder {
@@ -99,19 +112,52 @@
             z-index: 10;
         }
 
-        /* Estilos específicos para las celdas del Buscaminas */
+        /* Tablero Buscaminas (20 casillas -> 4 columnas x 5 filas) */
+        .mines-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
         .mine-cell {
-            transition: all 0.2s ease;
             aspect-ratio: 1;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
         }
         .mine-cell:active {
             transform: scale(0.92);
+        }
+        .mine-cell.revealed-safe {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
+            color: #10b981;
+            cursor: default;
+        }
+        .mine-cell.revealed-bomb {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #ef4444;
+            cursor: default;
+            animation: shake 0.3s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
         }
     </style>
 </head>
 <body class="min-h-screen bg-[#0a0a0a] overflow-x-hidden">
 
-<div class="max-w-md mx-auto min-h-screen bg-gradient-to-b from-[#0b0b0f] to-[#121826] relative pb-24">
+<div class="max-w-md mx-auto min-h-screen bg-gradient-to-b from-[#0b0b0f] to-[#121826] relative pb-28">
 
     <div class="sticky top-0 z-40 bg-[#0f172a]/90 backdrop-blur-lg border-b border-zinc-800">
         <div class="px-5 py-4 flex items-center justify-between">
@@ -119,13 +165,11 @@
                 <div class="w-11 h-11 rounded-2xl bg-cyan-500 flex items-center justify-center text-black font-bold text-xl shadow-lg shadow-cyan-500/30">
                     ⚡
                 </div>
-
                 <div>
                     <h1 class="font-bold text-xl text-white">TRON MINER</h1>
                     <p class="text-xs text-cyan-400">Telegram Mini App</p>
                 </div>
             </div>
-
             <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs">
                 Online
             </div>
@@ -223,40 +267,55 @@
         </div>
     </section>
 
-    <section id="screen-mines" class="app-screen hidden p-5 space-y-4">
-        <div class="bg-[#131c2f] rounded-3xl p-5 border border-cyan-500/20 flex flex-col justify-between items-center gap-3">
-            <div class="w-full flex justify-between items-center">
-                <div>
-                    <h3 class="font-bold text-md text-white flex items-center gap-2">
-                        <i class="fas fa-bomb text-red-500"></i> Buscaminas
-                    </h3>
-                    <p class="text-xs text-zinc-400 mt-0.5">Elige un nivel y evita las bombas</p>
-                </div>
-                <div class="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-full border border-zinc-800">
-                    <i class="fas fa-battery-three-quarters text-emerald-400 text-sm"></i>
-                    <span id="batteryText" class="font-bold text-sm text-emerald-400">6 / 6</span>
+    <section id="screen-mines" class="app-screen hidden p-5 space-y-5 pb-12">
+        <div class="bg-[#131c2f] rounded-3xl p-5 border border-purple-500/20 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-md flex items-center gap-2 text-fuchsia-400">
+                    <i class="fas fa-bomb"></i> Buscaminas de Bombas
+                </h3>
+                <div class="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-zinc-800">
+                    <i class="fas fa-battery-three-quarters text-emerald-400"></i>
+                    <span id="minesEnergyText" class="text-xs font-bold text-white">6 / 6</span>
                 </div>
             </div>
 
-            <button id="reloadBatteryBtn" onclick="watchMonetagAd()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-black flex items-center justify-center gap-2 shadow-md transition active:scale-95">
-                <i class="fas fa-video"></i> RECARGAR 1 BATERÍA (VER ANUNCIO)
-            </button>
-            <div id="batteryAutoTimer" class="text-[10px] text-zinc-500 italic">Siguiente recarga pasiva en: --:--:--</div>
-        </div>
-
-        <div class="bg-[#131c2f] rounded-2xl p-3 border border-zinc-800 grid grid-cols-4 gap-1.5 text-center text-xs">
-            <button onclick="setMineDifficulty('easy')" id="diff-easy" class="py-2 rounded-lg font-bold bg-cyan-600 text-white">Fácil<br><span class="text-[9px] font-normal">3 Bombas</span></button>
-            <button onclick="setMineDifficulty('medium')" id="diff-medium" class="py-2 rounded-lg font-bold bg-zinc-800 text-zinc-400">Medio<br><span class="text-[9px] font-normal">5 Bombas</span></button>
-            <button onclick="setMineDifficulty('hard')" id="diff-hard" class="py-2 rounded-lg font-bold bg-zinc-800 text-zinc-400">Difícil<br><span class="text-[9px] font-normal">8 Bombas</span></button>
-            <button onclick="setMineDifficulty('expert')" id="diff-expert" class="py-2 rounded-lg font-bold bg-zinc-800 text-zinc-400">Experto<br><span class="text-[9px] font-normal">12 B.</span></button>
-        </div>
-
-        <div class="bg-[#131c2f] rounded-3xl p-5 border border-zinc-800 space-y-4">
-            <div id="minesGrid" class="grid grid-cols-5 gap-2.5 max-w-xs mx-auto">
+            <div class="bg-black/30 p-3 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-2">
+                <div class="text-[11px] text-zinc-400 text-center sm:text-left">
+                    <p>+1 batería automáticamente cada 1 hora.</p>
+                    <p id="energyNextRefill" class="text-fuchsia-400 mt-0.5">Calculando...</p>
                 </div>
+                <button id="refillEnergyBtn" class="bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white text-xs px-3 py-2 rounded-xl font-bold active:scale-95 transition">
+                    Ver anuncio y reclamar batería
+                </button>
+            </div>
 
-            <button id="startMinesBtn" onclick="startMinesGame()" class="w-full py-3 rounded-2xl font-bold bg-cyan-500 text-black text-sm transition active:scale-95 flex items-center justify-center gap-2">
-                <i class="fas fa-play"></i> JUGAR (CONSUME 1 BATERÍA)
+            <div class="grid grid-cols-4 gap-2">
+                <button onclick="selectMinesLevel('easy')" id="level-btn-easy" class="py-2 rounded-xl text-xs font-bold transition bg-purple-600 text-white">Fácil (3)</button>
+                <button onclick="selectMinesLevel('medium')" id="level-btn-medium" class="py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400">Medio (6)</button>
+                <button onclick="selectMinesLevel('hard')" id="level-btn-hard" class="py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400">Difícil (9)</button>
+                <button onclick="selectMinesLevel('expert')" id="level-btn-expert" class="py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400">Experto (12)</button>
+            </div>
+
+            <div class="bg-black/40 p-4 rounded-2xl border border-zinc-800/80 flex justify-between items-center text-center">
+                <div>
+                    <p class="text-[10px] text-zinc-400 uppercase">Bombas</p>
+                    <p id="gameMinesCount" class="text-lg font-bold text-red-400">3</p>
+                </div>
+                <div>
+                    <p class="text-[10px] text-zinc-400 uppercase">Recompensa Acumulada</p>
+                    <p id="gameCurrentProfit" class="text-lg font-bold text-emerald-400">0.00000 TRX</p>
+                </div>
+                <div>
+                    <button id="minesCashoutBtn" disabled class="bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl font-bold opacity-50 cursor-not-allowed transition">
+                        Cobrar
+                    </button>
+                </div>
+            </div>
+
+            <div id="minesBoard" class="mines-grid"></div>
+
+            <button id="startMinesGameBtn" class="w-full py-4 rounded-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 text-black text-md transition active:scale-95 shadow-lg shadow-cyan-500/10">
+                INICIAR PARTIDA (-1 ENERGÍA)
             </button>
         </div>
     </section>
@@ -272,12 +331,8 @@
                     <p class="text-xs text-zinc-400">Gana 15% de comisión</p>
                 </div>
             </div>
-            <div id="referralLink" class="bg-black/40 rounded-2xl p-4 text-xs text-purple-300 break-all border border-zinc-800">
-                Cargando enlace...
-            </div>
-            <button onclick="copyReferralLink()" class="w-full mt-4 bg-purple-600 py-4 rounded-2xl font-semibold">
-                Copiar enlace
-            </button>
+            <div id="referralLink" class="bg-black/40 rounded-2xl p-4 text-xs text-purple-300 break-all border border-zinc-800">Cargando enlace...</div>
+            <button onclick="copyReferralLink()" class="w-full mt-4 bg-purple-600 py-4 rounded-2xl font-semibold">Copiar enlace</button>
         </div>
 
         <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
@@ -303,9 +358,7 @@
         <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
             <h3 class="font-semibold mb-4">Retirar fondos</h3>
             <input id="withdrawAddress" type="text" placeholder="Dirección TRON (TRC20)" class="w-full bg-black border border-zinc-700 rounded-2xl px-4 py-4 text-sm text-white outline-none">
-            <button id="withdrawBtn" class="w-full mt-4 bg-gradient-to-r from-amber-500 to-yellow-500 py-4 rounded-2xl font-bold text-black">
-                RETIRAR TODO
-            </button>
+            <button id="withdrawBtn" class="w-full mt-4 bg-gradient-to-r from-amber-500 to-yellow-500 py-4 rounded-2xl font-bold text-black">RETIRAR TODO</button>
         </div>
 
         <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
@@ -324,13 +377,10 @@
                 </div>
             </div>
         </div>
-        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
-            <p class="text-zinc-400 text-sm">Plataforma optimizada para Telegram Mini Apps.</p>
-        </div>
     </section>
 
     <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0b1120]/95 backdrop-blur-xl border-t border-zinc-800 z-50">
-        <div class="grid grid-cols-6 h-20">
+        <div class="nav-container">
             <button class="nav-btn active" data-screen="mining">
                 <i class="fas fa-bolt"></i>
                 <span>Minado</span>
@@ -341,7 +391,7 @@
             </button>
             <button class="nav-btn" data-screen="mines">
                 <i class="fas fa-bomb"></i>
-                <span>Juego</span>
+                <span>Minas</span>
             </button>
             <button class="nav-btn" data-screen="friends">
                 <i class="fas fa-users"></i>
@@ -361,7 +411,7 @@
 </div>
 
     <script>
-        // === CONFIG ===
+        // === CONFIG SUPABASE ===
         const SUPABASE_URL = "https://gmyysxuszqwhsbuglvos.supabase.co/rest/v1/";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdteXlzeHVzenF3aHNidWdsdm9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODExOTQsImV4cCI6MjA5NjM1NzE5NH0.C-1TCD8BG-GJtJl6hxJGmo60rqyNee4Q_bsEebRIveQ";
         
@@ -374,7 +424,7 @@
         let balance = 0;
         let totalMined = 0;
         let lastMineTime = 0;
-        const COOLDOWN = 3 * 60 * 1000; // 3 minutos
+        const COOLDOWN = 3 * 60 * 1000; 
         
         let AdController = null;
         let timerInterval = null;
@@ -389,7 +439,7 @@
         const timerEl = document.getElementById('timer');
         const timerStatus = document.getElementById('timerStatus');
 
-        // Variables de Control Ruleta
+        // Variables Ruleta e Incentivos
         const wheelRewards = [0.0005, 0.001, 0.001, 0.002, 0.002, 0.005, 0.01, 0];
         const wheelColors = ["#0ea5e9", "#1e293b", "#0ea5e9", "#1e293b", "#0ea5e9", "#1e293b", "#eab308", "#ef4444"];
         let isSpinning = false;
@@ -409,15 +459,24 @@
 
         const dailyRewardsConfig = [0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.01];
 
-        // VARIABLES DE CONTROL - NUEVO BUSCAMINAS
-        let currentMinesDifficulty = 'easy'; 
-        let currentBatteries = 6;
-        let lastBatteryChargeTime = Date.now();
-        const BATTERY_COOLDOWN = 6 * 60 * 60 * 1000; // 6 Horas automáticas
-        let minesGameState = 'idle'; // idle, playing, over
-        let minesArray = [];
-        let revealedCount = 0;
-        let totalSafeCells = 7;
+        // ==================================================
+        // VARIABLES DEL JUEGO BUSCAMINAS CON MULTIPLICADORES
+        // ==================================================
+        let minesEnergy = 6;
+        let lastEnergyRefillTime = Date.now();
+        let currentMinesLevel = 'easy'; 
+        let isMinesGameActive = false;
+        let minesBoardData = []; 
+        let revealedCellsCount = 0;
+        let minesCurrentAccumulatedReward = 0;
+
+        // Configuración matemática avanzada y progresiva por nivel
+        const minesLevelsConfig = {
+            easy: { bombs: 3, baseRewardPerCell: 0.0002, multiplierStep: 0.10 },
+            medium: { bombs: 6, baseRewardPerCell: 0.0005, multiplierStep: 0.20 },
+            hard: { bombs: 9, baseRewardPerCell: 0.0015, multiplierStep: 0.35 },
+            expert: { bombs: 12, baseRewardPerCell: 0.0040, multiplierStep: 0.50 }
+        };
 
         async function supabaseRequest(endpoint, method = "GET", body = null) {
             try {
@@ -440,14 +499,11 @@
 
         async function initUser() {
             let referredBy = null;
-
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
                 const user = window.Telegram.WebApp.initDataUnsafe?.user;
-                if (user) {
-                    telegramUserId = user.id;
-                }
+                if (user) telegramUserId = user.id;
                 
                 const startParam = window.Telegram.WebApp.initDataUnsafe?.start_param;
                 if (startParam && startParam.startsWith("ref_")) {
@@ -455,13 +511,9 @@
                 }
             }
 
-            if (!telegramUserId) {
-                telegramUserId = 5002555137; 
-            }
+            if (!telegramUserId) telegramUserId = 5002555137; 
 
-            if (referredBy == telegramUserId) {
-                referredBy = null;
-            }
+            if (referredBy == telegramUserId) referredBy = null;
 
             let users = await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`);
             
@@ -476,20 +528,14 @@
                     referrals_count: 0,
                     referred_by: referredBy
                 };
-                
                 const created = await supabaseRequest("users", "POST", newUser);
-                if (created && created.length > 0) {
-                    currentUser = created[0];
-                } else {
-                    currentUser = newUser;
-                }
+                currentUser = (created && created.length > 0) ? created[0] : newUser;
 
                 if (referredBy) {
                     const refUsers = await supabaseRequest(`users?telegram_id=eq.${referredBy}`);
                     if (refUsers && refUsers.length > 0) {
-                        const refUser = refUsers[0];
                         await supabaseRequest(`users?telegram_id=eq.${referredBy}`, "PATCH", {
-                            referrals_count: (refUser.referrals_count || 0) + 1
+                            referrals_count: (refUsers[0].referrals_count || 0) + 1
                         });
                     }
                 }
@@ -503,17 +549,16 @@
         }
 
         function getReferralLink() {
-            if (!telegramUserId) return "";
-            return `https://t.me/${BOT_USERNAME}?start=ref_${telegramUserId}`;
+            return telegramUserId ? `https://t.me/${BOT_USERNAME}?start=ref_${telegramUserId}` : "";
         }
 
         function copyReferralLink() {
             const link = getReferralLink();
             if (!link) return;
             navigator.clipboard.writeText(link).then(() => {
-                alert("✅ ¡Enlace de referido copiado al portapapeles!");
+                alert("✅ ¡Enlace de referido copiado!");
             }).catch(() => {
-                alert("No se pudo copiar automáticamente. Selecciónalo manualmente.");
+                alert("No se pudo copiar automáticamente.");
             });
         }
 
@@ -521,7 +566,14 @@
             balanceEl.textContent = balance.toFixed(5);
             totalMinedEl.textContent = totalMined.toFixed(5);
             todayMinedEl.textContent = (totalMined * 0.4).toFixed(5); 
-            document.getElementById('referralLink').textContent = getReferralLink() || "Generando...";
+            const linkEl = document.getElementById('referralLink');
+            if(linkEl) linkEl.textContent = getReferralLink() || "Generando...";
+            
+            const walletBalance = document.getElementById('walletBalance');
+            if (walletBalance) walletBalance.textContent = balance.toFixed(5);
+
+            const profileUserId = document.getElementById('profileUserId');
+            if (profileUserId) profileUserId.textContent = telegramUserId || "---";
         }
 
         function createParticles(count) {
@@ -539,28 +591,23 @@
             const timeLeft = COOLDOWN - (Date.now() - lastMineTime);
             if (timeLeft <= 0) {
                 timerEl.textContent = "00:00";
-                timerEl.className = "timer text-emerald-400 animate-pulse";
                 timerStatus.textContent = "¡Listo para reclamar!";
                 mineBtn.disabled = false;
                 mineText.textContent = "VER ANUNCIO Y RECLAMAR";
                 return;
             }
-
             const minutes = Math.floor(timeLeft / 60000);
             const seconds = Math.floor((timeLeft % 60000) / 1000);
             timerEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-            timerEl.className = "timer text-amber-400";
-            
             mineBtn.disabled = true;
             mineText.textContent = "ESPERA EL CRONÓMETRO";
         }
 
         async function mine() {
             if (Date.now() - lastMineTime < COOLDOWN) return;
-
             if (!AdController) {
-                alert("❌ AdsGram no está listo. Reintentando...");
-                try { AdController = window.Adsgram.init({ blockId: "34461", debug: true }); } catch(e){}
+                alert("❌ AdsGram no está listo. Inicializando...");
+                try { AdController = window.Adsgram.init({ blockId: "34461", debug: false }); } catch(e){}
                 return;
             }
 
@@ -570,7 +617,6 @@
 
             try {
                 await AdController.show();
-
                 const reward = 0.001;
                 balance += reward;
                 totalMined += reward;
@@ -580,16 +626,11 @@
                 if (currentUser && currentUser.referred_by) {
                     const referrerId = currentUser.referred_by;
                     const commission = reward * 0.15;
-
                     const refUsers = await supabaseRequest(`users?telegram_id=eq.${referrerId}`);
-
                     if (refUsers && refUsers.length > 0) {
-                        const refUser = refUsers[0];
-
                         await supabaseRequest(`users?telegram_id=eq.${referrerId}`, "PATCH", {
-                            balance: parseFloat(((refUser.balance || 0) + commission).toFixed(5))
+                            balance: parseFloat(((refUsers[0].balance || 0) + commission).toFixed(5))
                         });
-
                         await supabaseRequest("referral_commissions", "POST", {
                             referrer_id: parseInt(referrerId),
                             referred_user_id: telegramUserId,
@@ -606,13 +647,10 @@
                 updateUI();
                 createParticles(20);
                 loadCommissionHistory();
-
                 mineText.textContent = '¡+0.001 TRX RECLAMADO!';
                 setTimeout(updateTimer, 1800);
-
             } catch (e) {
-                console.warn("Anuncio omitido o error:", e);
-                alert("⚠️ Debes ver el anuncio completo para recibir la recompensa.");
+                alert("⚠️ Ve el anuncio completo para recibir la recompensa.");
                 updateTimer();
             } finally {
                 mineIcon.classList.remove('fa-spin');
@@ -623,12 +661,11 @@
             if (!telegramUserId) return;
             const history = await supabaseRequest(`referral_commissions?referrer_id=eq.${telegramUserId}&order=created_at.desc`);
             const container = document.getElementById('commissionHistory');
-
+            if (!container) return;
             if (!history || !history.length) {
                 container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">Sin comisiones aún</p>';
                 return;
             }
-
             container.innerHTML = history.map(item => `
                 <div class="bg-black/40 rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
                     <div>
@@ -642,19 +679,10 @@
 
         async function requestWithdraw() {
             const address = document.getElementById('withdrawAddress').value.trim();
-
-            if (!address) {
-                alert("Ingrese una dirección TRC20");
-                return;
-            }
-
-            if (balance < MIN_WITHDRAW) {
-                alert(`El retiro mínimo es ${MIN_WITHDRAW} TRX`);
-                return;
-            }
+            if (!address) { alert("Ingrese una dirección TRC20"); return; }
+            if (balance < MIN_WITHDRAW) { alert(`El retiro mínimo es ${MIN_WITHDRAW} TRX`); return; }
 
             const amount = balance;
-
             await supabaseRequest("withdrawals", "POST", {
                 telegram_id: telegramUserId,
                 wallet_address: address,
@@ -664,7 +692,6 @@
 
             balance = 0;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: 0 });
-
             updateUI();
             await loadWithdrawHistory();
             alert("✅ Solicitud enviada correctamente");
@@ -673,12 +700,11 @@
         async function loadWithdrawHistory() {
             const history = await supabaseRequest(`withdrawals?telegram_id=eq.${telegramUserId}&order=created_at.desc`);
             const container = document.getElementById('withdrawHistory');
-
-            if (!history.length) {
+            if (!container) return;
+            if (!history || !history.length) {
                 container.innerHTML = `<p class="text-zinc-500 text-xs">Sin retiros todavía</p>`;
                 return;
             }
-
             container.innerHTML = history.map(item => `
                 <div class="bg-black/30 p-4 rounded-xl">
                     <div class="flex justify-between">
@@ -694,12 +720,11 @@
             if (!telegramUserId) return;
             const referrals = await supabaseRequest(`users?referred_by=eq.${telegramUserId}&order=created_at.desc`);
             const container = document.getElementById('referralsList');
-
+            if (!container) return;
             if (!referrals || !referrals.length) {
                 container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">No has invitado a nadie todavía</p>';
                 return;
             }
-
             container.innerHTML = referrals.map(user => `
                 <div class="bg-black/40 rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
                     <div>
@@ -711,9 +736,9 @@
             `).join('');
         }
 
-        // ==========================================
-        // RULETA DE LA SUERTE
-        // ==========================================
+        // ==================================================
+        // RULETA Y OTROS CONTROLES ADSCRAM
+        // ==================================================
         function drawWheel() {
             const canvas = document.getElementById('wheelCanvas');
             if (!canvas) return;
@@ -723,10 +748,8 @@
             const radius = canvas.width / 2;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             for (let i = 0; i < numSegments; i++) {
                 const currentAngle = i * anglePerSegment;
-                
                 ctx.beginPath();
                 ctx.fillStyle = wheelColors[i];
                 ctx.moveTo(radius, radius);
@@ -740,7 +763,6 @@
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#ffffff";
                 ctx.font = "bold 11px Inter";
-                
                 let text = wheelRewards[i] === 0 ? "0 TRX" : `${wheelRewards[i]} TRX`;
                 ctx.fillText(text, radius - 15, 4);
                 ctx.restore();
@@ -749,11 +771,7 @@
 
         async function spinWheel() {
             if (isSpinning) return;
-
-            if (!AdController) {
-                alert("❌ El gestor de anuncios no está listo.");
-                return;
-            }
+            if (!AdController) { alert("❌ El gestor de anuncios no está listo."); return; }
 
             const btn = document.getElementById('spinWheelBtn');
             btn.disabled = true;
@@ -761,17 +779,14 @@
 
             try {
                 await AdController.show();
-                
                 isSpinning = true;
                 btn.textContent = "¡GIRANDO RULETA!";
 
                 const numSegments = wheelRewards.length;
                 const targetIdx = Math.floor(Math.random() * numSegments);
                 const prizeReward = wheelRewards[targetIdx];
-
                 const segmentAngleDeg = 360 / numSegments;
                 const canvas = document.getElementById('wheelCanvas');
-                
                 const extraDeg = 270 - (targetIdx * segmentAngleDeg) - (segmentAngleDeg / 2);
                 const totalRotation = (360 * 5) + extraDeg;
 
@@ -783,23 +798,12 @@
                     setTimeout(() => canvas.style.transition = 'transform 4s cubic-bezier(0.1, 0.8, 0.25, 1)', 50);
 
                     balance += prizeReward;
-                    await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
-                        balance: parseFloat(balance.toFixed(5))
-                    });
-
-                    await supabaseRequest("spin_history", "POST", {
-                        telegram_id: telegramUserId,
-                        reward: prizeReward
-                    });
+                    await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
+                    await supabaseRequest("spin_history", "POST", { telegram_id: telegramUserId, reward: prizeReward });
 
                     updateUI();
                     await loadSpinHistory();
-                    
-                    if (prizeReward > 0) {
-                        alert(`🎁 ¡Felicidades! Has ganado ${prizeReward} TRX`);
-                    } else {
-                        alert("😔 Suerte para la próxima.");
-                    }
+                    alert(prizeReward > 0 ? `🎁 ¡Felicidades! Has ganado ${prizeReward} TRX` : "😔 Suerte para la próxima.");
 
                     isSpinning = false;
                     btn.disabled = false;
@@ -807,8 +811,7 @@
                 }, 4000);
 
             } catch (err) {
-                console.warn("Anuncio omitido o con fallas en ruleta:", err);
-                alert("⚠️ Para girar la ruleta debes visualizar completamente el anuncio publicitario.");
+                alert("⚠️ Para girar la ruleta debes visualizar completamente el anuncio.");
                 btn.disabled = false;
                 btn.textContent = "VER AD Y GIRAR RULETA";
             }
@@ -819,12 +822,10 @@
             const history = await supabaseRequest(`spin_history?telegram_id=eq.${telegramUserId}&order=created_at.desc&limit=5`);
             const container = document.getElementById('spinHistoryList');
             if (!container) return;
-
             if (!history || !history.length) {
                 container.innerHTML = '<p class="text-zinc-500 italic">No hay giros recientes</p>';
                 return;
             }
-
             container.innerHTML = history.map(item => `
                 <div class="flex justify-between items-center border-b border-zinc-800/40 pb-1">
                     <span class="text-zinc-400">${new Date(item.created_at).toLocaleTimeString()}</span>
@@ -837,13 +838,11 @@
             if (!telegramUserId) return;
             const completedList = await supabaseRequest(`social_tasks_completed?telegram_id=eq.${telegramUserId}`);
             const completedIds = (completedList || []).map(t => t.task_id);
-
             const container = document.getElementById('socialTasksContainer');
             if (!container) return;
 
             container.innerHTML = staticSocialTasks.map(task => {
-                const isDone = completedIds.includes(task.id);
-                if (isDone) {
+                if (completedIds.includes(task.id)) {
                     return `
                         <div class="bg-black/30 p-3 rounded-2xl flex justify-between items-center border border-zinc-800/60">
                             <div>
@@ -855,13 +854,13 @@
                     `;
                 } else {
                     return `
-                        <div class="bg-black/30 p-3 rounded-2xl flex justify-between items-center border border-zinc-800/60" id="task-row-${task.id}">
+                        <div class="bg-black/30 p-3 rounded-2xl flex justify-between items-center border border-zinc-800/60">
                             <div>
                                 <div class="text-xs font-semibold text-white">${task.name}</div>
                                 <div class="text-[10px] text-purple-400 font-medium">+${task.reward} TRX</div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button onclick="openSocialTaskLink('${task.id}', '${task.url}')" id="btn-open-${task.id}" class="bg-purple-600 text-white text-[11px] px-3 py-1.5 rounded-xl font-semibold active:scale-95 transition">Abrir</button>
+                                <button onclick="openSocialTaskLink('${task.id}', '${task.url}')" id="btn-open-${task.id}" class="bg-purple-600 text-white text-[11px] px-3 py-1.5 rounded-xl font-semibold transition">Abrir</button>
                                 <button onclick="claimSocialTask('${task.id}', ${task.reward})" id="btn-claim-${task.id}" disabled class="bg-zinc-700 text-zinc-400 text-[11px] px-3 py-1.5 rounded-xl font-semibold opacity-50 cursor-not-allowed transition">Reclamar</button>
                             </div>
                         </div>
@@ -874,7 +873,6 @@
             window.open(url, '_blank');
             const openBtn = document.getElementById(`btn-open-${taskId}`);
             const claimBtn = document.getElementById(`btn-claim-${taskId}`);
-            
             if (!openBtn || !claimBtn) return;
             
             openBtn.disabled = true;
@@ -887,8 +885,7 @@
                     clearInterval(counter);
                     openBtn.textContent = "Abierto";
                     claimBtn.disabled = false;
-                    claimBtn.classList.remove("bg-zinc-700", "text-zinc-400", "opacity-50", "cursor-not-allowed");
-                    claimBtn.classList.add("bg-emerald-500", "text-black", "active:scale-95");
+                    claimBtn.className = "bg-emerald-500 text-black text-[11px] px-3 py-1.5 rounded-xl font-semibold transition active:scale-95";
                 } else {
                     openBtn.textContent = `${secondsLeft}s`;
                 }
@@ -896,41 +893,25 @@
         }
 
         async function claimSocialTask(taskId, rewardAmount) {
-            if (!telegramUserId) return;
-            
-            const check = await supabaseRequest(`social_tasks_completed?telegram_id=eq.${telegramUserId}&task_id=eq.${taskId}`);
-            if (check && check.length > 0) {
-                alert("Esta tarea ya fue completada.");
-                loadSocialTasks();
-                return;
-            }
-
-            await supabaseRequest("social_tasks_completed", "POST", {
-                telegram_id: telegramUserId,
-                task_id: taskId,
-                reward: rewardAmount
-            });
-
+            await supabaseRequest("social_tasks_completed", "POST", { telegram_id: telegramUserId, task_id: taskId, reward: rewardAmount });
             balance += rewardAmount;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
-
             updateUI();
-            alert(`✅ Recompensa de ${rewardAmount} TRX añadida correctamente.`);
+            alert(`✅ Recompensa de ${rewardAmount} TRX añadida.`);
             await loadSocialTasks();
         }
 
         async function loadReferralMilestones() {
-            if (!telegramUserId || !currentUser) return;
-            
+            if (!telegramUserId) return;
             const rawRefs = await supabaseRequest(`users?referred_by=eq.${telegramUserId}`);
             const countRefs = rawRefs ? rawRefs.length : 0;
             
-            const currentRefsElement = document.getElementById('milestonesCurrentRefs');
-            if (currentRefsElement) currentRefsElement.textContent = countRefs;
+            if(document.getElementById('milestonesCurrentRefs')) {
+                document.getElementById('milestonesCurrentRefs').textContent = countRefs;
+            }
 
             const claimedMilestonesList = await supabaseRequest(`referral_milestones?telegram_id=eq.${telegramUserId}`);
             const claimedIds = (claimedMilestonesList || []).map(m => parseInt(m.milestone));
-
             const container = document.getElementById('referralMilestonesContainer');
             if (!container) return;
 
@@ -938,16 +919,13 @@
                 const isClaimed = claimedIds.includes(ms.id);
                 const progressPercent = Math.min(100, (countRefs / ms.req) * 100);
 
-                let actionButtonHTML = '';
+                let btnHTML = '';
                 if (isClaimed) {
-                    actionButtonHTML = `<span class="text-[11px] text-zinc-500 font-bold bg-zinc-800/40 px-3 py-1 rounded-xl border border-zinc-800">RECLAMADO</span>`;
+                    btnHTML = `<span class="text-[11px] text-zinc-500 font-bold bg-zinc-800/40 px-3 py-1 rounded-xl border border-zinc-800">RECLAMADO</span>`;
                 } else if (countRefs >= ms.req) {
-                    actionButtonHTML = `
-                        <button onclick="claimMilestoneBonus(${ms.id}, ${ms.reward})" class="bg-gradient-to-r from-emerald-500 to-green-600 text-black text-[11px] px-3 py-1.5 rounded-xl font-bold active:scale-95 transition shadow-md shadow-emerald-500/10">
-                            Reclamar
-                        </button>`;
+                    btnHTML = `<button onclick="claimMilestoneBonus(${ms.id}, ${ms.reward})" class="bg-gradient-to-r from-emerald-500 to-green-600 text-black text-[11px] px-3 py-1.5 rounded-xl font-bold active:scale-95 transition">Reclamar</button>`;
                 } else {
-                    actionButtonHTML = `<span class="text-[10px] text-zinc-400 font-medium bg-black/40 px-2.5 py-1 rounded-lg border border-zinc-800">${countRefs}/${ms.req} Amigos</span>`;
+                    btnHTML = `<span class="text-[10px] text-zinc-400 font-medium bg-black/40 px-2.5 py-1 rounded-lg border border-zinc-800">${countRefs}/${ms.req} Amigos</span>`;
                 }
 
                 return `
@@ -957,10 +935,10 @@
                                 <h4 class="text-xs font-semibold text-white">Meta: ${ms.req} Referidos</h4>
                                 <p class="text-[10px] text-emerald-400 font-medium">Bono: +${ms.reward} TRX</p>
                             </div>
-                            <div>${actionButtonHTML}</div>
+                            <div>${btnHTML}</div>
                         </div>
                         <div class="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
-                            <div class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full transition-all duration-500" style="width: ${progressPercent}%"></div>
+                            <div class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full" style="width: ${progressPercent}%"></div>
                         </div>
                     </div>
                 `;
@@ -968,26 +946,11 @@
         }
 
         async function claimMilestoneBonus(milestoneId, reward) {
-            if (!telegramUserId) return;
-
-            const check = await supabaseRequest(`referral_milestones?telegram_id=eq.${telegramUserId}&milestone=eq.${milestoneId}`);
-            if (check && check.length > 0) {
-                alert("Esta bonificación ya fue obtenida anteriormente.");
-                loadReferralMilestones();
-                return;
-            }
-
-            await supabaseRequest("referral_milestones", "POST", {
-                telegram_id: telegramUserId,
-                milestone: milestoneId,
-                reward: reward
-            });
-
+            await supabaseRequest("referral_milestones", "POST", { telegram_id: telegramUserId, milestone: milestoneId, reward: reward });
             balance += reward;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
-
             updateUI();
-            alert(`🎉 ¡Excelente! Has cobrado tu bono acumulativo de ${reward} TRX.`);
+            alert(`🎉 Bono de ${reward} TRX cobrado.`);
             await loadReferralMilestones();
         }
 
@@ -998,31 +961,23 @@
             let canClaimNow = true;
 
             if (records && records.length > 0) {
-                const userRow = records[0];
-                const lastCheckinDate = new Date(userRow.last_checkin_at);
-                const now = new Date();
-
-                const diffHours = (now - lastCheckinDate) / (1000 * 60 * 60);
-
-                if (diffHours < 24) {
-                    canClaimNow = false;
-                    streak = userRow.current_streak;
-                } else if (diffHours >= 24 && diffHours < 48) {
-                    streak = userRow.current_streak;
-                    canClaimNow = true;
-                } else {
-                    streak = 0;
-                    canClaimNow = true;
-                }
+                const diffHours = (new Date() - new Date(records[0].last_checkin_at)) / (1000 * 60 * 60);
+                if (diffHours < 24) { canClaimNow = false; streak = records[0].current_streak; }
+                else if (diffHours < 48) { streak = records[0].current_streak; canClaimNow = true; }
+                else { streak = 0; canClaimNow = true; }
             }
 
-            document.getElementById('dailyStreakCount').textContent = streak;
+            const countEl = document.getElementById('dailyStreakCount');
+            if(countEl) countEl.textContent = streak;
+            
             const rewardIndex = streak % 7;
             const currentRewardValue = dailyRewardsConfig[rewardIndex];
-            
-            document.getElementById('nextDailyRewardText').textContent = `Premio del día (Día ${rewardIndex + 1}): ${currentRewardValue} TRX`;
+            if(document.getElementById('nextDailyRewardText')) {
+                document.getElementById('nextDailyRewardText').textContent = `Premio del día (Día ${rewardIndex + 1}): ${currentRewardValue} TRX`;
+            }
 
             const claimBtn = document.getElementById('claimDailyBtn');
+            if (!claimBtn) return;
             if (!canClaimNow) {
                 claimBtn.disabled = true;
                 claimBtn.textContent = "MAÑANA PODRÁS VOLVER A RECLAMAR";
@@ -1035,316 +990,256 @@
         }
 
         async function executeDailyCheckIn() {
-            if (!telegramUserId) return;
             const records = await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`);
-            let streak = 0;
+            let streak = 1;
             let exists = false;
 
             if (records && records.length > 0) {
                 exists = true;
-                const userRow = records[0];
-                const lastCheckinDate = new Date(userRow.last_checkin_at);
-                const now = new Date();
-                const diffHours = (now - lastCheckinDate) / (1000 * 60 * 60);
-
-                if (diffHours < 24) {
-                    alert("Ya has completado tu check-in de hoy.");
-                    return;
-                } else if (diffHours >= 24 && diffHours < 48) {
-                    streak = userRow.current_streak + 1;
-                } else {
-                    streak = 1;
-                }
-            } else {
-                streak = 1;
+                const diffHours = (new Date() - new Date(records[0].last_checkin_at)) / (1000 * 60 * 60);
+                if (diffHours < 24) { alert("Ya has completado tu check-in de hoy."); return; }
+                streak = (diffHours < 48) ? (records[0].current_streak + 1) : 1;
             }
 
             const rewardIndex = (streak - 1) % 7;
             const rewardAmount = dailyRewardsConfig[rewardIndex];
 
             if (exists) {
-                await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`, "PATCH", {
-                    current_streak: streak,
-                    last_checkin_at: new Date().toISOString()
-                });
+                await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`, "PATCH", { current_streak: streak, last_checkin_at: new Date().toISOString() });
             } else {
-                await supabaseRequest("daily_checkin", "POST", {
-                    telegram_id: telegramUserId,
-                    current_streak: streak,
-                    last_checkin_at: new Date().toISOString()
-                });
+                await supabaseRequest("daily_checkin", "POST", { telegram_id: telegramUserId, current_streak: streak, last_checkin_at: new Date().toISOString() });
             }
 
             balance += rewardAmount;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
-
             updateUI();
-            alert(`📆 Check-In exitoso. Día ${rewardIndex + 1} completado. Recibes: +${rewardAmount} TRX.`);
+            alert(`📆 Check-In exitoso: +${rewardAmount} TRX.`);
             await loadDailyCheckIn();
         }
 
+        // ==========================================================
+        // SISTEMA COMPLETO DE BUSCAMINAS: NIVELES Y MULTIPLICADORES
+        // ==========================================================
+        function updateMinesEnergySystem() {
+            const savedEnergy = localStorage.getItem('minesEnergy');
+            const savedTime = localStorage.getItem('lastEnergyRefillTime');
 
-        // ==========================================
-        // LÓGICA EXCLUSIVA DEL JUEGO: BUSCAMINAS (SEXTA PESTAÑA)
-        // ==========================================
-        
-        // Carga el estado de baterías local o calcula la recarga pasiva de 6 horas
-        function initBatteriesEngine() {
-            const savedBatteries = localStorage.getItem('mines_batteries');
-            const savedTime = localStorage.getItem('mines_last_charge_time');
+            if (savedEnergy !== null) minesEnergy = parseInt(savedEnergy);
+            if (savedTime !== null) lastEnergyRefillTime = parseInt(savedTime);
 
-            if (savedBatteries !== null && savedTime !== null) {
-                currentMinesDifficulty = localStorage.getItem('mines_difficulty') || 'easy';
-                currentBatteries = parseInt(savedBatteries);
-                lastBatteryChargeTime = parseInt(savedTime);
+            const now = Date.now();
+            const elapsedHours = Math.floor((now - lastEnergyRefillTime) / (3600 * 1000));
 
-                // Calcular ciclos de 6 horas transcurridos
-                const elapsed = Date.now() - lastBatteryChargeTime;
-                if (elapsed >= BATTERY_COOLDOWN) {
-                    const extraBatteries = Math.floor(elapsed / BATTERY_COOLDOWN);
-                    currentBatteries = Math.min(6, currentBatteries + extraBatteries);
-                    lastBatteryChargeTime = Date.now() - (elapsed % BATTERY_COOLDOWN);
-                    saveBatteriesState();
-                }
+            if (elapsedHours > 0 && minesEnergy < 6) {
+                minesEnergy = Math.min(6, minesEnergy + elapsedHours);
+                lastEnergyRefillTime = lastEnergyRefillTime + (elapsedHours * 3600 * 1000);
+                localStorage.setItem('minesEnergy', minesEnergy);
+                localStorage.setItem('lastEnergyRefillTime', lastEnergyRefillTime);
+            }
+
+            document.getElementById('minesEnergyText').textContent = `${minesEnergy} / 6`;
+
+            const timerText = document.getElementById('energyNextRefill');
+            if (minesEnergy >= 6) {
+                timerText.textContent = "Energía al máximo";
             } else {
-                currentBatteries = 6;
-                lastBatteryChargeTime = Date.now();
-                saveBatteriesState();
-            }
-            updateBatteriesUI();
-        }
-
-        function saveBatteriesState() {
-            localStorage.setItem('mines_batteries', currentBatteries);
-            localStorage.setItem('mines_last_charge_time', lastBatteryChargeTime);
-            localStorage.setItem('mines_difficulty', currentMinesDifficulty);
-        }
-
-        function updateBatteriesUI() {
-            document.getElementById('batteryText').textContent = `${currentBatteries} / 6`;
-            const timerEl = document.getElementById('batteryAutoTimer');
-            
-            if (currentBatteries >= 6) {
-                timerEl.textContent = "Baterías al máximo";
-            } else {
-                const nextChargeTime = lastBatteryChargeTime + BATTERY_COOLDOWN;
-                const remaining = nextChargeTime - Date.now();
-                if (remaining > 0) {
-                    const hrs = Math.floor(remaining / 3600000).toString().padStart(2, '0');
-                    const mins = Math.floor((remaining % 3600000) / 60000).toString().padStart(2, '0');
-                    const secs = Math.floor((remaining % 60000) / 1000).toString().padStart(2, '0');
-                    timerEl.textContent = `Auto-recarga en: ${hrs}:${mins}:${secs}`;
-                } else {
-                    initBatteriesEngine();
-                }
+                const remainingMs = (lastEnergyRefillTime + (3600 * 1000)) - now;
+                const min = Math.max(0, Math.floor(remainingMs / 60000));
+                const sec = Math.max(0, Math.floor((remainingMs % 60000) / 1000));
+                timerText.textContent = `Siguiente carga en: ${min}:${sec < 10 ? '0' : ''}${sec}`;
             }
         }
 
-        // Ejecuta el flujo publicitario de Monetag para recargar 1 batería
-        function watchMonetagAd() {
-            if (currentBatteries >= 6) {
-                alert("Tus baterías ya están al máximo.");
-                return;
-            }
-
-            const btn = document.getElementById('reloadBatteryBtn');
+        // Botón de Monetag corregido e integrado profesionalmente
+        function watchMonetagAdForEnergy() {
+            const btn = document.getElementById('refillEnergyBtn');
             btn.disabled = true;
-            btn.textContent = "CARGANDO ANUNCIO...";
+            btn.textContent = "Cargando anuncio...";
 
-            // Invocación del Tag SDK de Monetag por medio de su Zone interactiva
             if (typeof show_11119512 === 'function') {
                 show_11119512().then(() => {
-                    // Recompensa exitosa tras ver el anuncio
-                    currentBatteries = Math.min(6, currentBatteries + 1);
-                    saveBatteriesState();
-                    updateBatteriesUI();
-                    alert("🔋 ¡Batería recargada con éxito!");
+                    if (minesEnergy < 6) {
+                        minesEnergy++;
+                        localStorage.setItem('minesEnergy', minesEnergy);
+                        if (minesEnergy === 1) localStorage.setItem('lastEnergyRefillTime', Date.now());
+                        updateMinesEnergySystem();
+                        alert("🔋 ¡Batería recargada exitosamente!");
+                    } else {
+                        alert("Tu energía ya está al máximo.");
+                    }
                     btn.disabled = false;
-                    btn.textContent = "RECARGAR 1 BATERÍA (VER ANUNCIO)";
+                    btn.textContent = "Ver anuncio y reclamar batería";
                 }).catch((err) => {
-                    console.error("Error al cargar Monetag:", err);
-                    alert("El anuncio no pudo completarse. Inténtalo de nuevo.");
+                    alert("No se completó la visualización del anuncio.");
                     btn.disabled = false;
-                    btn.textContent = "RECARGAR 1 BATERÍA (VER ANUNCIO)";
+                    btn.textContent = "Ver anuncio y reclamar batería";
                 });
             } else {
-                // Fallback de contingencia si el Script está bloqueado
-                alert("El servidor de anuncios Monetag no se encuentra disponible momentáneamente.");
+                alert("El servidor de Monetag está saturado. Inténtalo en unos segundos.");
                 btn.disabled = false;
-                btn.textContent = "RECARGAR 1 BATERÍA (VER ANUNCIO)";
+                btn.textContent = "Ver anuncio y reclamar batería";
             }
         }
 
-        function setMineDifficulty(level) {
-            if (minesGameState === 'playing') return;
-            currentMinesDifficulty = level;
-            saveBatteriesState();
-
-            // Actualizar botones visuales
+        function selectMinesLevel(level) {
+            if (isMinesGameActive) { alert("Termina o cobra tu partida actual primero."); return; }
+            currentMinesLevel = level;
+            
             ['easy', 'medium', 'hard', 'expert'].forEach(l => {
-                const b = document.getElementById(`diff-${l}`);
-                if (l === level) {
-                    b.className = "py-2 rounded-lg font-bold bg-cyan-600 text-white";
-                } else {
-                    b.className = "py-2 rounded-lg font-bold bg-zinc-800 text-zinc-400";
-                }
+                const el = document.getElementById(`level-btn-${l}`);
+                if (l === level) el.className = "py-2 rounded-xl text-xs font-bold transition bg-purple-600 text-white";
+                else el.className = "py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400";
             });
-            renderEmptyGrid();
+
+            document.getElementById('gameMinesCount').textContent = minesLevelsConfig[level].bombs;
+            document.getElementById('gameCurrentProfit').textContent = "0.00000 TRX";
+            renderEmptyBoard();
         }
 
-        function getBombsCount() {
-            if (currentMinesDifficulty === 'easy') return 3;
-            if (currentMinesDifficulty === 'medium') return 5;
-            if (currentMinesDifficulty === 'hard') return 8;
-            return 12; // Experto
-        }
-
-        function getMinesReward() {
-            // Factor multiplicador basado en riesgo
-            if (currentMinesDifficulty === 'easy') return 0.0005;
-            if (currentMinesDifficulty === 'medium') return 0.0015;
-            if (currentMinesDifficulty === 'hard') return 0.004;
-            return 0.015; // Experto
-        }
-
-        function renderEmptyGrid() {
-            const grid = document.getElementById('minesGrid');
-            grid.innerHTML = '';
-            for (let i = 0; i < 10; i++) {
-                const cell = document.createElement('button');
-                cell.className = "mine-cell bg-[#1e293b] border border-zinc-700 text-transparent font-bold text-sm rounded-xl p-2 flex items-center justify-center cursor-not-allowed";
-                cell.innerHTML = '<i class="fas fa-question text-zinc-600"></i>';
-                grid.appendChild(cell);
+        function renderEmptyBoard() {
+            const board = document.getElementById('minesBoard');
+            board.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'mine-cell';
+                cell.textContent = '?';
+                board.appendChild(cell);
             }
         }
 
-        function startMinesGame() {
-            if (minesGameState === 'playing') return;
+        function initMinesGame() {
+            if (isMinesGameActive) return;
+            if (minesEnergy < 1) { alert("❌ No tienes energía. Usa el botón de Monetag para recargar gratis."); return; }
 
-            if (currentBatteries < 1) {
-                alert("⚠️ No tienes baterías suficientes. Ve un anuncio para recargar de inmediato.");
-                return;
-            }
+            minesEnergy--;
+            localStorage.setItem('minesEnergy', minesEnergy);
+            if (minesEnergy === 5) localStorage.setItem('lastEnergyRefillTime', Date.now());
+            updateMinesEnergySystem();
 
-            // Consumir 1 batería
-            currentBatteries--;
-            saveBatteriesState();
-            updateBatteriesUI();
+            isMinesGameActive = true;
+            revealedCellsCount = 0;
+            minesCurrentAccumulatedReward = 0;
+            document.getElementById('gameCurrentProfit').textContent = "0.00000 TRX";
+            document.getElementById('startMinesGameBtn').disabled = true;
+            document.getElementById('startMinesGameBtn').textContent = "JUEGO EN CURSO...";
+            
+            const config = minesLevelsConfig[currentMinesLevel];
 
-            minesGameState = 'playing';
-            revealedCount = 0;
-            const numBombs = getBombsCount();
-            totalSafeCells = 10 - numBombs;
-
-            document.getElementById('startMinesBtn').disabled = true;
-            document.getElementById('startMinesBtn').textContent = "PARTIDA EN CURSO...";
-
-            // Generar arreglo con bombas ocultas de manera aleatoria
-            minesArray = Array(10).fill('safe');
-            let placedBombs = 0;
-            while (placedBombs < numBombs) {
-                let randomIdx = Math.floor(Math.random() * 10);
-                if (minesArray[randomIdx] === 'safe') {
-                    minesArray[randomIdx] = 'bomb';
-                    placedBombs++;
+            // Generar mapa oculto de 20 casillas
+            minesBoardData = [];
+            for(let i=0; i<20; i++) { minesBoardData.push({ isBomb: false, revealed: false }); }
+            
+            let bombsPlaced = 0;
+            while (bombsPlaced < config.bombs) {
+                let randIdx = Math.floor(Math.random() * 20);
+                if (!minesBoardData[randIdx].isBomb) {
+                    minesBoardData[randIdx].isBomb = true;
+                    bombsPlaced++;
                 }
             }
 
-            // Dibujar celdas operativas en pantalla
-            const grid = document.getElementById('minesGrid');
-            grid.innerHTML = '';
+            const board = document.getElementById('minesBoard');
+            board.innerHTML = '';
+            minesBoardData.forEach((cellInfo, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'mine-cell';
+                cell.textContent = '?';
+                cell.addEventListener('click', () => clickMineCell(index, cell));
+                board.appendChild(cell);
+            });
 
-            for (let i = 0; i < 10; i++) {
-                const cell = document.createElement('button');
-                cell.className = "mine-cell bg-slate-800 border border-cyan-500/20 text-white font-bold text-sm rounded-xl p-2 flex items-center justify-center shadow-inner hover:bg-slate-700";
-                cell.innerHTML = '<i class="fas fa-question text-cyan-400/50"></i>';
-                cell.onclick = () => selectMineCell(cell, i);
-                grid.appendChild(cell);
-            }
+            const cashoutBtn = document.getElementById('minesCashoutBtn');
+            cashoutBtn.disabled = true;
+            cashoutBtn.className = "bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl font-bold opacity-50 cursor-not-allowed transition";
         }
 
-        async function selectMineCell(cellElement, index) {
-            if (minesGameState !== 'playing') return;
-            if (cellElement.disabled) return;
+        async function clickMineCell(index, cellElement) {
+            if (!isMinesGameActive || minesBoardData[index].revealed) return;
 
-            cellElement.disabled = true;
+            minesBoardData[index].revealed = true;
+            const config = minesLevelsConfig[currentMinesLevel];
 
-            if (minesArray[index] === 'bomb') {
-                // EXPLOSIÓN: Fin de la partida
-                minesGameState = 'over';
-                cellElement.className = "mine-cell bg-red-600/80 border border-red-500 text-white font-bold text-sm rounded-xl p-2 flex items-center justify-center shadow-lg animate-bounce";
+            if (minesBoardData[index].isBomb) {
+                cellElement.className = 'mine-cell revealed-bomb';
                 cellElement.innerHTML = '<i class="fas fa-bomb"></i>';
-                
-                revealAllGrid(false);
-                alert("💥 ¡BOOM! Has tocado una bomba. Juego terminado.");
-                resetMinesControls();
+                endMinesGame(false);
             } else {
-                // CASILLA SEGURA
-                revealedCount++;
-                cellElement.className = "mine-cell bg-emerald-500/20 border border-emerald-500 text-emerald-400 font-bold text-sm rounded-xl p-2 flex items-center justify-center shadow-inner";
-                cellElement.innerHTML = '<i class="fas fa-check"></i>';
+                revealedCellsCount++;
+                cellElement.className = 'mine-cell revealed-safe';
+                cellElement.innerHTML = '<i class="fas fa-gem"></i>';
 
-                // Verificar condición de Victoria
-                if (revealedCount === totalSafeCells) {
-                    minesGameState = 'over';
-                    revealAllGrid(true);
+                // FÓRMULA DE RECOMPENSA Y MULTIPLICACIÓN PROGRESIVA REQUERIDA
+                // Cada casilla consecutiva exitosa aumenta el premio base escalado por el multiplicador del nivel.
+                let currentTurnMultiplier = 1 + (revealedCellsCount * config.multiplierStep);
+                minesCurrentAccumulatedReward += (config.baseRewardPerCell * currentTurnMultiplier);
+                
+                document.getElementById('gameCurrentProfit').textContent = `${minesCurrentAccumulatedReward.toFixed(5)} TRX`;
 
-                    const winPrize = getMinesReward();
-                    balance += winPrize;
+                const cashoutBtn = document.getElementById('minesCashoutBtn');
+                cashoutBtn.disabled = false;
+                cashoutBtn.className = "bg-emerald-500 text-black text-xs px-4 py-2.5 rounded-xl font-bold transition active:scale-95 shadow-md shadow-emerald-500/20";
 
-                    // Actualizar de manera persistente en Supabase
-                    await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
-                        balance: parseFloat(balance.toFixed(5))
-                    });
-
-                    updateUI();
-                    createParticles(15);
-                    alert(`🎉 ¡VICTORIA PERFECTA! Has evitado todas las bombas. Recompensa: +${winPrize} TRX`);
-                    resetMinesControls();
+                const totalSafeCells = 20 - config.bombs;
+                if (revealedCellsCount === totalSafeCells) {
+                    await cashoutMinesReward();
                 }
             }
         }
 
-        function revealAllGrid(isWin) {
-            const grid = document.getElementById('minesGrid');
-            const cells = grid.children;
-            for (let i = 0; i < 10; i++) {
-                cells[i].disabled = true;
-                if (minesArray[i] === 'bomb') {
-                    cells[i].className = isWin ? "mine-cell bg-zinc-800 text-red-500 font-bold text-sm rounded-xl p-2 flex items-center justify-center opacity-60" : "mine-cell bg-red-600 border border-red-500 text-white font-bold text-sm rounded-xl p-2 flex items-center justify-center";
-                    cells[i].innerHTML = '<i class="fas fa-bomb"></i>';
-                } else if (minesArray[i] === 'safe' && !isWin && cells[i].innerHTML.includes('fa-question')) {
-                    cells[i].className = "mine-cell bg-zinc-800 text-zinc-500 font-bold text-sm rounded-xl p-2 flex items-center justify-center opacity-40";
-                    cells[i].innerHTML = '<i class="fas fa-check text-zinc-600"></i>';
+        async function cashoutMinesReward() {
+            if (!isMinesGameActive || minesCurrentAccumulatedReward <= 0) return;
+
+            balance += minesCurrentAccumulatedReward;
+            await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                balance: parseFloat(balance.toFixed(5))
+            });
+
+            alert(`💰 ¡Excelente! Cobraste +${minesCurrentAccumulatedReward.toFixed(5)} TRX seguros.`);
+            updateUI();
+            endMinesGame(true);
+        }
+
+        function endMinesGame(isWin) {
+            isMinesGameActive = false;
+            const board = document.getElementById('minesBoard');
+            board.innerHTML = '';
+            
+            minesBoardData.forEach((cellInfo) => {
+                const cell = document.createElement('div');
+                if (cellInfo.isBomb) {
+                    cell.className = 'mine-cell revealed-bomb';
+                    cell.innerHTML = '<i class="fas fa-bomb"></i>';
+                } else {
+                    cell.className = 'mine-cell revealed-safe';
+                    cell.innerHTML = cellInfo.revealed ? '<i class="fas fa-gem"></i>' : '';
                 }
-            }
+                board.appendChild(cell);
+            });
+
+            if (!isWin) alert("💥 ¡BOOM! Tocaste una bomba. Perdiste el acumulado de esta ronda.");
+
+            document.getElementById('startMinesGameBtn').disabled = false;
+            document.getElementById('startMinesGameBtn').textContent = "INICIAR PARTIDA (-1 ENERGÍA)";
+            
+            const cashoutBtn = document.getElementById('minesCashoutBtn');
+            cashoutBtn.disabled = true;
+            cashoutBtn.className = "bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl font-bold opacity-50 cursor-not-allowed transition";
         }
 
-        function resetMinesControls() {
-            const btn = document.getElementById('startMinesBtn');
-            btn.disabled = false;
-            btn.textContent = "JUGAR (CONSUME 1 BATERÍA)";
-        }
-
-
-        // ==========================================
-        // SISTEMA DE NAVEGACIÓN COMPLETO DE 6 SECCIONES
-        // ==========================================
+        // =========================
+        // NAVEGACIÓN ENTRE PESTAÑAS
+        // =========================
         function switchScreen(screen) {
-            document.querySelectorAll('.app-screen').forEach(el => {
-                el.classList.add('hidden');
-            });
+            document.querySelectorAll('.app-screen').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
 
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            const targetScreen = document.getElementById(`screen-${screen}`);
+            const targetBtn = document.querySelector(`[data-screen="${screen}"]`);
+            
+            if(targetScreen) targetScreen.classList.remove('hidden');
+            if(targetBtn) targetBtn.classList.add('active');
 
-            document.getElementById(`screen-${screen}`).classList.remove('hidden');
-            document.querySelector(`[data-screen="${screen}"]`).classList.add('active');
-
-            if (screen === 'tasks') {
-                setTimeout(drawWheel, 100);
-            }
+            if (screen === 'tasks') setTimeout(drawWheel, 150);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1355,27 +1250,12 @@
             });
         });
 
-        const originalUpdateUI = updateUI;
-        updateUI = function() {
-            originalUpdateUI();
-            const walletBalance = document.getElementById('walletBalance');
-            if (walletBalance) {
-                walletBalance.textContent = balance.toFixed(5);
-            }
-            const profileUserId = document.getElementById('profileUserId');
-            if (profileUserId && telegramUserId) {
-                profileUserId.textContent = telegramUserId;
-            }
-        };
-
         async function init() {
             await initUser();
             await loadCommissionHistory();
 
             if (window.Adsgram) {
                 AdController = window.Adsgram.init({ blockId: "34461", debug: false });
-            } else {
-                console.error("Adsgram SDK no detectado.");
             }
 
             const savedTime = localStorage.getItem('lastMineTime');
@@ -1383,9 +1263,7 @@
 
             updateTimer();
             timerInterval = setInterval(updateTimer, 1000);
-
-            // Reloj en bucle secundario para refrescar baterías en tiempo real
-            setInterval(updateBatteriesUI, 1000);
+            setInterval(updateMinesEnergySystem, 1000);
 
             mineBtn.addEventListener('click', mine);
             document.getElementById('withdrawBtn').addEventListener('click', requestWithdraw);
@@ -1393,7 +1271,7 @@
             await loadReferrals();
             await loadWithdrawHistory();
 
-            // Inicializar complementos de Tareas
+            // Tareas e Incentivos iniciales
             drawWheel();
             await loadSpinHistory();
             await loadSocialTasks();
@@ -1403,9 +1281,12 @@
             document.getElementById('spinWheelBtn').addEventListener('click', spinWheel);
             document.getElementById('claimDailyBtn').addEventListener('click', executeDailyCheckIn);
 
-            // Inicializar el Buscaminas de la pestaña 6 de manera estática
-            initBatteriesEngine();
-            renderEmptyGrid();
+            // Buscaminas
+            renderEmptyBoard();
+            updateMinesEnergySystem();
+            document.getElementById('refillEnergyBtn').addEventListener('click', watchMonetagAdForEnergy);
+            document.getElementById('startMinesGameBtn').addEventListener('click', initMinesGame);
+            document.getElementById('minesCashoutBtn').addEventListener('click', cashoutMinesReward);
         }
 
         window.onload = init;
