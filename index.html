@@ -507,7 +507,7 @@
             }
         }
 
-        // Función de Inicialización del Usuario
+        // Función de Inicialización del Usuario - CORREGIDA CON ESPERA TOTAL
         async function initUser() {
             let referredBy = null;
             let initData = "";
@@ -533,9 +533,8 @@
 
             if (referredBy == telegramUserId) referredBy = null;
 
-            updateUI();
-
             try {
+                // Intentamos la autenticación por Edge Function
                 const authResponse = await supabaseRequest("functions/v1/telegram-auth", "POST", {
                     initData: initData,
                     referredBy: referredBy
@@ -543,18 +542,18 @@
 
                 if (authResponse && authResponse.token) {
                     sessionToken = authResponse.token;
-                } else {
-                    console.warn("⚠️ Usando conexión REST fallback.");
                 }
             } catch(err) {
-                console.warn("⚠️ Conexión con backend saltada. Usando fallback local.");
+                console.warn("⚠️ Fallback auth local activo.");
             }
 
+            // Consultamos la tabla de usuarios de manera síncrona
             let users = await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`);
             
             if (users && users.length > 0) {
                 currentUser = users[0];
             } else {
+                // Si es un usuario nuevo, lo creamos
                 const newUser = {
                     telegram_id: telegramUserId,
                     username: `user_${telegramUserId}`,
@@ -576,12 +575,16 @@
                 }
             }
 
+            // CARGA REAL DESDE LA BASE DE DATOS TRAS VALIDAR EL REGISTRO
             if (currentUser) {
                 balance = parseFloat(currentUser.balance) || 0;
                 totalMined = parseFloat(currentUser.total_mined) || 0;
             }
+            
+            // Forzamos actualización de la UI con los datos reales recuperados
             updateUI();
 
+            // Cargar script de Monetag de fondo de forma segura
             setTimeout(() => {
                 const adScript = document.createElement('script');
                 adScript.src = '//libtl.com/sdk.js';
@@ -650,7 +653,6 @@
             mineText.textContent = "ESPERA EL CRONÓMETRO";
         }
 
-        // === ENTORNO CORREGIDO PARA SUMAR Y NO BORRAR EL BALANCE ===
         async function mine() {
             if (Date.now() - lastMineTime < COOLDOWN) return;
             if (!AdController) {
@@ -683,8 +685,6 @@
                     throw new Error(result.error || "Error en el servidor");
                 }
 
-                // Si el servidor devuelve un balance numérico válido, lo usamos. 
-                // Si devuelve 0, nulo o falla la lectura, acumulamos de forma segura localmente (+0.001).
                 const serverBalance = Number(result.balance);
                 if (!isNaN(serverBalance) && serverBalance > 0) {
                     balance = serverBalance;
@@ -692,7 +692,6 @@
                     balance = Number(balance) + 0.001;
                 }
 
-                // Mismo filtro de protección para el total general minado
                 const serverTotalMined = Number(result.totalMined);
                 if (!isNaN(serverTotalMined) && serverTotalMined > 0) {
                     totalMined = serverTotalMined;
@@ -1445,6 +1444,7 @@
             });
         });
 
+        // === FUNCIÓN INIT OPTIMIZADA ===
         async function init() {
             if (window.Adsgram) {
                 AdController = window.Adsgram.init({ blockId: "34461", debug: false });
@@ -1460,8 +1460,10 @@
             mineBtn.addEventListener('click', mine);
             document.getElementById('withdrawBtn').addEventListener('click', requestWithdraw);
 
+            // 1. ESPERAMOS OBLIGATORIAMENTE a que cargue el usuario e inyecte los balances reales
             await initUser();
 
+            // 2. UNA VEZ CARGADO EL BALANCE, preparamos las llamadas secundarias de las pestañas
             loadReferrals();
             loadWithdrawHistory();
             loadSpinHistory();
