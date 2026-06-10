@@ -12,8 +12,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { 
-            font-family: 'Inter', sans-serif; 
-            background: #0a0a0a; 
+            font-family: 'Inter', sans-serif; \n            background: #0a0a0a; 
             color: white; 
         }
         .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
@@ -507,7 +506,7 @@
             }
         }
 
-        // Función de Inicialización del Usuario Modificada y Tolerante a Fallos
+        // Función de Inicialización del Usuario Modificada
         async function initUser() {
             let referredBy = null;
             let initData = "";
@@ -526,7 +525,6 @@
                 }
             }
 
-            // Fallback controlado para desarrollo local si no hay entorno nativo
             if (!telegramUserId) {
                 telegramUserId = 5002555137; 
                 initData = `user=${encodeURIComponent(JSON.stringify({id: telegramUserId, username: "dev_user"}))}`;
@@ -534,10 +532,8 @@
 
             if (referredBy == telegramUserId) referredBy = null;
 
-            // ACTUALIZACIÓN PRIORITARIA DE INTERFAZ: Forzar visualización inmediata del ID de Telegram
             updateUI();
 
-            // Intentar Autenticación en Edge Function de forma segura sin congelar la app
             try {
                 const authResponse = await supabaseRequest("functions/v1/telegram-auth", "POST", {
                     initData: initData,
@@ -547,13 +543,12 @@
                 if (authResponse && authResponse.token) {
                     sessionToken = authResponse.token;
                 } else {
-                    console.warn("⚠️ Advertencia: La firma criptográfica falló. Usando conexión REST fallback.");
+                    console.warn("⚠️ Usando conexión REST fallback.");
                 }
             } catch(err) {
                 console.warn("⚠️ Conexión con backend saltada. Usando fallback local.");
             }
 
-            // Obtener perfil sincronizado usando el ID nativo ya garantizado
             let users = await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`);
             
             if (users && users.length > 0) {
@@ -586,7 +581,6 @@
             }
             updateUI();
 
-            // Carga diferida y segura del script publicitario secundario
             setTimeout(() => {
                 const adScript = document.createElement('script');
                 adScript.src = '//libtl.com/sdk.js';
@@ -652,6 +646,7 @@
             mineText.textContent = "ESPERA EL CRONÓMETRO";
         }
 
+        // 1. MODIFICADO: LLAMADA BLINDADA A LA EDGE FUNCTION DE MINADO
         async function mine() {
             if (Date.now() - lastMineTime < COOLDOWN) return;
             if (!AdController) {
@@ -666,32 +661,29 @@
 
             try {
                 await AdController.show();
-                const reward = 0.001;
-                balance += reward;
-                totalMined += reward;
-                lastMineTime = Date.now();
-                localStorage.setItem('lastMineTime', lastMineTime);
+                mineText.textContent = "Procesando recompensa...";
 
-                if (currentUser && currentUser.referred_by) {
-                    const referrerId = currentUser.referred_by;
-                    const commission = reward * 0.15;
-                    const refUsers = await supabaseRequest(`users?telegram_id=eq.${referrerId}`);
-                    if (refUsers && refUsers.length > 0) {
-                        await supabaseRequest(`users?telegram_id=eq.${referrerId}`, "PATCH", {
-                            balance: parseFloat(((refUsers[0].balance || 0) + commission).toFixed(5))
-                        });
-                        await supabaseRequest("referral_commissions", "POST", {
-                            referrer_id: parseInt(referrerId),
-                            referred_user_id: telegramUserId,
-                            amount: commission
-                        });
-                    }
+                const response = await fetch(`${SUPABASE_BASE_URL}functions/v1/claim-mining-reward`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ telegramUserId: telegramUserId })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || result.error) {
+                    throw new Error(result.error || "Error en el servidor");
                 }
 
-                await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
-                    balance: parseFloat(balance.toFixed(5)),
-                    total_mined: parseFloat(totalMined.toFixed(5))
-                });
+                // Sincronizar datos devueltos por el backend seguro
+                balance = result.balance;
+                totalMined = result.totalMined;
+                lastMineTime = Date.now();
+                localStorage.setItem('lastMineTime', lastMineTime);
 
                 updateUI();
                 createParticles(20);
@@ -699,7 +691,7 @@
                 mineText.textContent = '¡+0.001 TRX RECLAMADO!';
                 setTimeout(updateTimer, 1800);
             } catch (e) {
-                alert("⚠️ Ve el anuncio completo para recibir la recompensa.");
+                alert("⚠️ Error: " + (e.message || "Ve el anuncio completo para recibir la recompensa."));
                 updateTimer();
             } finally {
                 mineIcon.classList.remove('fa-spin');
@@ -730,24 +722,42 @@
             }
         }
 
+        // 2. MODIFICADO: SOLICITUD DE RETIROS SEGUROS VÍA EDGE FUNCTION
         async function requestWithdraw() {
             const address = document.getElementById('withdrawAddress').value.trim();
             if (!address) { alert("Ingrese una dirección TRC20"); return; }
             if (balance < MIN_WITHDRAW) { alert(`El retiro mínimo es ${MIN_WITHDRAW} TRX`); return; }
 
             const amount = balance;
-            await supabaseRequest("withdrawals", "POST", {
-                telegram_id: telegramUserId,
-                wallet_address: address,
-                amount: amount,
-                status: "pending"
-            });
+            
+            try {
+                const response = await fetch(`${SUPABASE_BASE_URL}functions/v1/create-withdrawal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        telegramUserId: telegramUserId,
+                        address: address,
+                        amount: amount
+                    })
+                });
 
-            balance = 0;
-            await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: 0 });
-            updateUI();
-            await loadWithdrawHistory();
-            alert("✅ Solicitud de retiro enviada correctamente.");
+                const result = await response.json();
+
+                if (!response.ok || result.error) {
+                    throw new Error(result.error || "Retiro rechazado por el servidor.");
+                }
+
+                balance = result.newBalance; // El servidor devolverá 0 si todo sale bien
+                updateUI();
+                await loadWithdrawHistory();
+                alert("✅ Solicitud de retiro procesada y guardada correctamente.");
+            } catch (e) {
+                alert(`❌ Error en retiro: ${e.message}`);
+            }
         }
 
         async function loadWithdrawHistory() {
@@ -1015,13 +1025,36 @@
             }
         }
 
+        // 3. MODIFICADO: VALIDACIÓN SEGURA DE METAS DE REFERIDOS VÍA EDGE FUNCTION
         async function claimMilestoneBonus(milestoneId, reward) {
-            await supabaseRequest("referral_milestones", "POST", { telegram_id: telegramUserId, milestone: milestoneId, reward: reward });
-            balance += reward;
-            await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
-            updateUI();
-            alert(`🎉 Bono de ${reward} TRX cobrado.`);
-            await loadReferralMilestones();
+            try {
+                const response = await fetch(`${SUPABASE_BASE_URL}functions/v1/claim-referral-commission`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ 
+                        telegramUserId: telegramUserId,
+                        milestoneId: milestoneId,
+                        rewardAmount: reward
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || result.error) {
+                    throw new Error(result.error || "No se pudo reclamar.");
+                }
+
+                balance = result.balance;
+                updateUI();
+                alert(`🎉 ¡Bono de ${reward} TRX cobrado con éxito en el servidor!`);
+                await loadReferralMilestones();
+            } catch (e) {
+                alert(`❌ Error: ${e.message}`);
+            }
         }
 
         async function loadDailyCheckIn() {
@@ -1356,7 +1389,6 @@
             }
         }
 
-        // === SISTEMA DE NAVEGACIÓN CORREGIDO (Garantiza clicks instantáneos) ===
         function switchScreen(screen) {
             document.querySelectorAll('.app-screen').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -1367,7 +1399,6 @@
             if (targetScreen) targetScreen.classList.remove('hidden');
             if (targetBtn) targetBtn.classList.add('active');
 
-            // Cargar datos específicos solo al entrar a la pestaña para optimizar
             if (screen === 'tasks') {
                 setTimeout(drawWheel, 50);
                 loadSocialTasks();
@@ -1386,7 +1417,6 @@
             }
         }
 
-        // Registrar los eventos de los botones de navegación inmediatamente al cargar el DOM
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -1398,7 +1428,6 @@
             });
         });
 
-        // Inicializador Global de la Aplicación
         async function init() {
             if (window.Adsgram) {
                 AdController = window.Adsgram.init({ blockId: "34461", debug: false });
@@ -1414,10 +1443,8 @@
             mineBtn.addEventListener('click', mine);
             document.getElementById('withdrawBtn').addEventListener('click', requestWithdraw);
 
-            // Intentar cargar la info del usuario de fondo sin trabar la UI
             await initUser();
 
-            // Cargar datos iniciales asíncronos en paralelo
             loadReferrals();
             loadWithdrawHistory();
             loadSpinHistory();
