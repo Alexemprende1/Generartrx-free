@@ -23,8 +23,7 @@
         .timer { font-size: 2.2rem; font-weight: 700; letter-spacing: 2px; }
         .particle { 
             position: absolute; width: 6px; height: 6px; 
-            background: #00f0ff; border-radius: 50%; 
-            pointer-events: none; animation: particleAnim 1.5s forwards; 
+            background: #00f0ff; border-radius: 50%; \n            pointer-events: none; animation: particleAnim 1.5s forwards; 
         }
         @keyframes particleAnim { 
             0% { transform: scale(1); opacity: 1; } 
@@ -45,7 +44,7 @@
             justify-content: space-between;
             width: 100%;
             height: 76px;
-            padding: 0 8px;
+            padding: 0 4px;
         }
 
         .nav-btn {
@@ -101,8 +100,8 @@
             top: -10px;
             left: 50%;
             transform: translateX(-50%);
-            width: 0;
-            height: 0;
+            width: 0; 
+            height: 0; 
             border-left: 15px solid transparent;
             border-right: 15px solid transparent;
             border-top: 25px solid #ef4444;
@@ -145,10 +144,7 @@
             animation: shake 0.3s ease;
         }
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-4px); }
-            75% { transform: translateX(4px); }
-        }
+            0%, 100% { transform: translateX(0); }\n            25% { transform: translateX(-4px); }\n            75% { transform: translateX(4px); }\n        }
     </style>
 </head>
 <body class="min-h-screen bg-[#0a0a0a] overflow-x-hidden">
@@ -502,20 +498,15 @@
             expert: { bombs: 12, baseRewardPerCell: 0.0040, multiplierStep: 0.50 }
         };
 
-        // TRATAMIENTO ESTABLE DE RPC REQS
+        // ENVIAR PARÁMETROS COMO TEXTO PLANO ESTRUCTURADO (JSON OBJ)
         async function supabaseRPCRequest(functionName, params = {}) {
             try {
                 const fullUrl = `${SUPABASE_BASE_URL}rest/v1/rpc/${functionName}`;
                 
-                let bodyContent;
-                if (Array.isArray(params)) {
-                    bodyContent = JSON.stringify(params);
-                } else {
-                    const stringifiedParams = {};
-                    for (const key in params) {
-                        stringifiedParams[key] = String(params[key]);
-                    }
-                    bodyContent = JSON.stringify(stringifiedParams);
+                // Forzar conversión estricta de cada propiedad a String para evitar conflictos PostgreSQL numéricos/vacíos
+                const structuredTextParams = {};
+                for (const key in params) {
+                    structuredTextParams[key] = String(params[key]);
                 }
 
                 const res = await fetch(fullUrl, {
@@ -526,22 +517,22 @@
                         "Content-Type": "application/json",
                         "Prefer": "return=representation"
                     },
-                    body: bodyContent
+                    body: JSON.stringify(structuredTextParams)
                 });
 
                 if (!res.ok) {
                     const errorData = await res.json();
-                    console.error("Error detallado de Supabase:", errorData);
-                    throw new Error(errorData.message || "Error en RPC");
+                    console.error("Error devuelto por Supabase RPC:", errorData);
+                    return null;
                 }
                 return await res.json();
             } catch (e) { 
-                console.error("Error en " + functionName + ":", e);
+                console.error("Excepción atrapada en " + functionName + ":", e);
                 return null; 
             }
         }
 
-        // Función de Inicialización Criptográfica de Usuario
+        // Sincronización Inicial del Usuario
         async function initUser() {
             let referredBy = null;
             let initData = "";
@@ -567,10 +558,11 @@
 
             if (referredBy == telegramUserId) referredBy = null;
 
-            const rpcResponse = await supabaseRPCRequest("verify_and_sync_telegram_user", [
-                String(initData), 
-                referredBy ? String(referredBy) : ""
-            ]);
+            // Envío con nombres de clave esperados por tu base de datos
+            const rpcResponse = await supabaseRPCRequest("verify_and_sync_telegram_user", {
+                init_data_param: initData,
+                referred_by_param: referredBy ? referredBy : ""
+            });
 
             if (rpcResponse && rpcResponse.success) {
                 currentUser = rpcResponse.user;
@@ -580,7 +572,7 @@
                     lastMineTime = new Date(currentUser.last_mine_time).getTime();
                 }
             } else {
-                console.error("⚠️ Error en la validación del InitData.");
+                console.error("⚠️ No se pudo autenticar el usuario.");
                 balance = 0;
                 totalMined = 0;
             }
@@ -654,7 +646,10 @@
                 
                 const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
 
-                const rpcResponse = await supabaseRPCRequest("execute_secure_mining_claim", [String(initData), "0.000005"]);
+                const rpcResponse = await supabaseRPCRequest("execute_secure_mining_claim", {
+                    init_data_param: initData,
+                    claim_amount_param: "0.000005"
+                });
 
                 if (rpcResponse && rpcResponse.success) {
                     balance = parseFloat(rpcResponse.new_balance);
@@ -664,25 +659,24 @@
                     createParticles(12);
                     updateUI();
                 } else {
-                    alert("⚠️ Error de firma al validar el reclamo del bloque.");
+                    alert("⚠️ Error al validar el reclamo del bloque.");
                 }
                 updateTimer();
             };
 
             if (AdController) {
-                AdController.show().then(() => { executeMiningAction(); }).catch((err) => { console.log("Ad Blocked o Error:", err); executeMiningAction(); });
+                AdController.show().then(() => { executeMiningAction(); }).catch((err) => { executeMiningAction(); });
             } else {
                 executeMiningAction();
             }
         }
 
-        // CORRECCIÓN HISTORIALES: Pasados a arreglos estables ordenados
         async function loadReferrals() {
             const container = document.getElementById('referralsList');
             if (!container) return;
             container.innerHTML = '<p class="text-zinc-500 text-xs italic">Sincronizando red...</p>';
 
-            const data = await supabaseRPCRequest("get_secure_referrals", [String(telegramUserId)]);
+            const data = await supabaseRPCRequest("get_secure_referrals", { user_id_param: telegramUserId });
             if (!data || data.length === 0) {
                 container.innerHTML = '<p class="text-zinc-500 text-xs italic">Aún no tienes referidos</p>';
                 return;
@@ -702,7 +696,7 @@
             if (!container) return;
             container.innerHTML = '<p class="text-zinc-500 text-xs italic">Buscando transacciones...</p>';
 
-            const data = await supabaseRPCRequest("get_secure_withdrawals", [String(telegramUserId)]);
+            const data = await supabaseRPCRequest("get_secure_withdrawals", { user_id_param: telegramUserId });
             if (!data || data.length === 0) {
                 container.innerHTML = '<p class="text-zinc-500 text-xs italic">No hay retiros registrados</p>';
                 return;
@@ -726,7 +720,7 @@
             if (!container) return;
             container.innerHTML = '<p class="text-zinc-500 text-xs italic">Cargando recompensas...</p>';
 
-            const data = await supabaseRPCRequest("get_secure_commissions", [String(telegramUserId)]);
+            const data = await supabaseRPCRequest("get_secure_commissions", { user_id_param: telegramUserId });
             if (!data || data.length === 0) {
                 container.innerHTML = '<p class="text-zinc-500 text-xs italic">No hay comisiones aún</p>';
                 return;
@@ -746,7 +740,7 @@
             const container = document.getElementById('spinHistoryList');
             if (!container) return;
 
-            const data = await supabaseRPCRequest("get_secure_spin_history", [String(telegramUserId)]);
+            const data = await supabaseRPCRequest("get_secure_spin_history", { user_id_param: telegramUserId });
             if (!data || data.length === 0) return;
             container.innerHTML = data.map(s => `
                 <div class="flex justify-between border-b border-zinc-800/50 pb-1">
@@ -760,7 +754,7 @@
             const container = document.getElementById('minesHistoryList');
             if (!container) return;
 
-            const data = await supabaseRPCRequest("get_secure_mines_history", [String(telegramUserId)]);
+            const data = await supabaseRPCRequest("get_secure_mines_history", { user_id_param: telegramUserId });
             if (!data || data.length === 0) return;
             container.innerHTML = data.map(m => `
                 <div class="bg-black/30 p-2.5 rounded-xl flex justify-between items-center">
@@ -807,27 +801,27 @@
 
             const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
             
-            const rpcResponse = await supabaseRPCRequest("execute_secure_withdrawal", [
-                String(initData),
-                String(addr),
-                String(metodoRetiroSeleccionado),
-                String(balance)
-            ]);
+            const rpcResponse = await supabaseRPCRequest("execute_secure_withdrawal", {
+                init_data_param: initData,
+                address_param: addr,
+                method_param: metodoRetiroSeleccionado,
+                amount_param: balance
+            });
 
             if (rpcResponse && rpcResponse.success) {
-                alert("✅ Solicitud de retiro registrada de forma segura en la blockchain.");
+                alert("✅ Solicitud de retiro registrada de forma segura.");
                 balance = 0;
                 updateUI();
                 loadWithdrawHistory();
             } else {
-                alert(rpcResponse?.message || "Error procesando el retiro criptográfico.");
+                alert(rpcResponse?.message || "Error procesando el retiro.");
             }
         }
 
         async function executeDailyCheckIn() {
             const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
             
-            const rpcResponse = await supabaseRPCRequest("execute_secure_daily_checkin", [String(initData)]);
+            const rpcResponse = await supabaseRPCRequest("execute_secure_daily_checkin", { init_data_param: initData });
 
             if (rpcResponse && rpcResponse.success) {
                 balance = parseFloat(rpcResponse.new_balance);
@@ -859,15 +853,15 @@
             window.open(taskUrl, '_blank');
             const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
             
-            const rpcResponse = await supabaseRPCRequest("execute_secure_social_task", [
-                String(initData),
-                String(taskId),
-                String(taskReward)
-            ]);
+            const rpcResponse = await supabaseRPCRequest("execute_secure_social_task", {
+                init_data_param: initData,
+                task_id_param: taskId,
+                task_reward_param: taskReward
+            });
 
             if (rpcResponse && rpcResponse.success) {
                 balance = parseFloat(rpcResponse.new_balance);
-                alert(`✅ Tarea validada de manera segura. Recibes: ${taskReward} TRX`);
+                alert(`✅ Tarea validada. Recibes: ${taskReward} TRX`);
                 updateUI();
             } else {
                 alert(rpcResponse?.message || "Esta red social ya fue verificada anteriormente.");
@@ -895,18 +889,18 @@
 
         async function claimMilestone(mId, mReward) {
             const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-            const rpcResponse = await supabaseRPCRequest("execute_secure_milestone_claim", [
-                String(initData),
-                String(mId),
-                String(mReward)
-            ]);
+            const rpcResponse = await supabaseRPCRequest("execute_secure_milestone_claim", {
+                init_data_param: initData,
+                milestone_id_param: mId,
+                milestone_reward_param: mReward
+            });
 
             if (rpcResponse && rpcResponse.success) {
                 balance = parseFloat(rpcResponse.new_balance);
-                alert(`🏆 Meta validada. ¡Bono de ${mReward} TRX agregado a tu monedero!`);
+                alert(`🏆 Meta validada. ¡Bono de ${mReward} TRX agregado!`);
                 updateUI();
             } else {
-                alert(rpcResponse?.message || "Meta no calificada o ya fue reclamada de forma previa.");
+                alert(rpcResponse?.message || "Meta no calificada o reclamada anteriormente.");
             }
         }
 
@@ -953,10 +947,11 @@
                     canvas.style.transform = `rotate(0deg)`;
 
                     const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-                    const rpcResponse = await supabaseRPCRequest("execute_secure_wheel_spin", [
-                        String(initData),
-                        String(finalReward)
-                    ]);
+                    
+                    const rpcResponse = await supabaseRPCRequest("execute_secure_wheel_spin", {
+                        init_data_param: initData,
+                        reward_param: finalReward
+                    });
 
                     if (rpcResponse && rpcResponse.success) {
                         balance = parseFloat(rpcResponse.new_balance);
@@ -1019,7 +1014,7 @@
             const addEnergyUnit = () => {
                 minesEnergy++;
                 updateMinesEnergySystem();
-                alert("⚡ Batería recargada de forma exitosa por ver el anuncio.");
+                alert("⚡ Batería recargada por ver el anuncio.");
             };
             if (AdController) {
                 AdController.show().then(() => addEnergyUnit()).catch(() => addEnergyUnit());
@@ -1114,15 +1109,16 @@
             endMinesGame(true);
 
             const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-            const rpcResponse = await supabaseRPCRequest("execute_secure_mines_cashout", [
-                String(initData),
-                String(currentMinesLevel),
-                String(prize)
-            ]);
+            
+            const rpcResponse = await supabaseRPCRequest("execute_secure_mines_cashout", {
+                init_data_param: initData,
+                level_param: currentMinesLevel,
+                profit_param: prize
+            });
 
             if (rpcResponse && rpcResponse.success) {
                 balance = parseFloat(rpcResponse.new_balance);
-                alert(`💰 ¡Cobro Exitoso! Has retirado ${prize.toFixed(5)} TRX de la mesa.`);
+                alert(`💰 ¡Cobro Exitoso! Has retirado ${prize.toFixed(5)} TRX.`);
                 updateUI();
                 loadMinesHistory();
             } else {
@@ -1154,15 +1150,15 @@
 
         async function saveLostMinesMatch() {
             const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-            await supabaseRPCRequest("execute_secure_mines_cashout", [
-                String(initData),
-                String(currentMinesLevel),
-                "0"
-            ]);
+            await supabaseRPCRequest("execute_secure_mines_cashout", {
+                init_data_param: initData,
+                level_param: currentMinesLevel,
+                profit_param: "0"
+            });
             loadMinesHistory();
         }
 
-        // Lógica Global de Navegación de Pestañas
+        // Manejador del Menú de Navegación Inferior
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -1175,7 +1171,7 @@
             });
         });
 
-        // Inicialización de la Aplicación
+        // Inicialización General de la App
         async function init() {
             mineBtn.addEventListener('click', mine);
             document.getElementById('withdrawBtn').addEventListener('click', executeWithdraw);
@@ -1200,10 +1196,10 @@
             renderSocialTasks();
             updateMinesEnergySystem();
 
-            // 1. Ejecutar sincronización inicial obligatoria
+            // Sincronizar y autenticar usuario
             await initUser();
 
-            // 2. Cargar historiales usando los arreglos seguros y unificados
+            // Carga de historiales mapeados por objeto con texto plano
             loadReferrals();
             loadWithdrawHistory();
             loadSpinHistory();
