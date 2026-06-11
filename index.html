@@ -503,6 +503,7 @@
         };
 
         // Petición Autenticada y Protegida a Supabase mediante llamadas Seguras (RPC)
+        // MODIFICACIÓN DE COMPATIBILIDAD DECIMAL: Transforma de forma automática los números flotantes a Strings estructurados
         async function supabaseRPCRequest(functionName, params = {}) {
             try {
                 const fullUrl = `${SUPABASE_BASE_URL}rest/v1/rpc/${functionName}`;
@@ -512,10 +513,22 @@
                     "Content-Type": "application/json"
                 };
 
+                // Ciclo seguro para interceptar y parsear los decimales flotantes dinámicos de JS a texto (para Postgres)
+                const processedParams = {};
+                for (const key in params) {
+                    if (Object.prototype.hasOwnProperty.call(params, key)) {
+                        if (typeof params[key] === 'number') {
+                            processedParams[key] = params[key].toString();
+                        } else {
+                            processedParams[key] = params[key];
+                        }
+                    }
+                }
+
                 const config = { 
                     method: "POST", 
                     headers,
-                    body: JSON.stringify(params)
+                    body: JSON.stringify(processedParams)
                 };
 
                 const res = await fetch(fullUrl, config);
