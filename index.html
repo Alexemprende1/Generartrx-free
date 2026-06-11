@@ -507,10 +507,17 @@
             try {
                 const fullUrl = `${SUPABASE_BASE_URL}rest/v1/rpc/${functionName}`;
                 
-                // Convertimos todos los valores a string para evitar conflictos de tipo con PostgreSQL
-                const stringifiedParams = {};
-                for (const key in params) {
-                    stringifiedParams[key] = String(params[key]);
+                // Si params es un arreglo, lo enviamos directamente de forma posicional
+                let bodyContent;
+                if (Array.isArray(params)) {
+                    bodyContent = JSON.stringify(params);
+                } else {
+                    // Convertimos todos los valores a string para evitar conflictos de tipo con PostgreSQL
+                    const stringifiedParams = {};
+                    for (const key in params) {
+                        stringifiedParams[key] = String(params[key]);
+                    }
+                    bodyContent = JSON.stringify(stringifiedParams);
                 }
 
                 const res = await fetch(fullUrl, {
@@ -521,7 +528,7 @@
                         "Content-Type": "application/json",
                         "Prefer": "return=representation"
                     },
-                    body: JSON.stringify(stringifiedParams)
+                    body: bodyContent
                 });
 
                 if (!res.ok) {
@@ -564,11 +571,11 @@
 
             if (referredBy == telegramUserId) referredBy = null;
 
-            // Invocamos el RPC remoto que procesa y valida los datos mediante pgcrypto hmac sha256
-            const rpcResponse = await supabaseRPCRequest("verify_and_sync_telegram_user", {
-                init_data_raw: initData,
-                referred_by_id: referredBy ? parseInt(referredBy) : null
-            });
+            // MODIFICACIÓN APLICADA: Enviamos como un Arreglo posicional compatible y seguro
+            const rpcResponse = await supabaseRPCRequest("verify_and_sync_telegram_user", [
+                String(initData), 
+                referredBy ? String(referredBy) : ""
+            ]);
 
             if (rpcResponse && rpcResponse.success) {
                 currentUser = rpcResponse.user;
@@ -579,7 +586,6 @@
                 }
             } else {
                 console.error("⚠️ Error en la validación criptográfica del InitData.");
-                // Datos de resguardo en memoria por integridad visual ante cortes de red
                 balance = 0;
                 totalMined = 0;
             }
@@ -652,12 +658,8 @@
                 mineText.textContent = "PROCESANDO RETORNO SEGURIZADO...";
                 
                 const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-                const rewardAmount = 0.0025; 
 
-                const rpcResponse = await supabaseRPCRequest("execute_secure_mining_claim", {
-                    init_data_raw: initData,
-                    reward_value: rewardAmount
-                });
+                const rpcResponse = await supabaseRPCRequest("execute_secure_mining_claim", [String(initData), "0.000005"]);
 
                 if (rpcResponse && rpcResponse.success) {
                     balance = parseFloat(rpcResponse.new_balance);
@@ -673,18 +675,12 @@
             };
 
             if (AdController) {
-                AdController.show().then(() => {
-                    executeMiningAction();
-                }).catch((err) => {
-                    console.log("Ad Blocked o Error:", err);
-                    executeMiningAction(); 
-                });
+                AdController.show().then(() => { executeMiningAction(); }).catch((err) => { console.log("Ad Blocked o Error:", err); executeMiningAction(); });
             } else {
                 executeMiningAction();
             }
         }
 
-        // === SISTEMA SECUNDARIO DE CARGA ASÍNCRONA VÍA LLAMADAS CONSOLIDADAS ===
         async function loadReferrals() {
             const container = document.getElementById('referralsList');
             if (!container) return;
@@ -783,7 +779,6 @@
             `).join('');
         }
 
-        // Interfaz de Billeteras y Retiros
         function cambiarMetodoRetiro(metodo) {
             metodoRetiroSeleccionado = metodo;
             const btnDirecto = document.getElementById('btn-withdraw-direct');
@@ -833,7 +828,6 @@
             }
         }
 
-        // Incentivos, Tareas y Check-In Diario
         async function executeDailyCheckIn() {
             const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
             
@@ -922,7 +916,6 @@
             }
         }
 
-        // Ruleta Criptográfica
         function initWheel() {
             const canvas = document.getElementById('wheelCanvas');
             if(!canvas) return;
@@ -993,7 +986,6 @@
             }
         }
 
-        // === INTEGRACIÓN COMPLETA BUSCAMINAS (BOMBAS) ===
         function selectMinesLevel(lvl) {
             if (isMinesGameActive) return;
             currentMinesLevel = lvl;
