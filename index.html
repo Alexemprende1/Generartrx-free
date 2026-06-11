@@ -286,10 +286,10 @@
             </div>
 
             <div class="grid grid-cols-4 gap-2">
-                <button onclick="selectMinesLevel('easy')" id="level-btn-easy" class="py-2 rounded-xl text-xs font-bold transition bg-purple-600 text-white">Fácil (3)</button>
-                <button onclick="selectMinesLevel('medium')" id="level-btn-medium" class="py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400">Medio (6)</button>
-                <button onclick="selectMinesLevel('hard')" id="level-btn-hard" class="py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400">Difícil (9)</button>
-                <button onclick="selectMinesLevel('expert')" id="level-btn-expert" class="py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400">Experto (12)</button>
+                <button type="button" onclick="selectMinesLevel('easy')" id="level-btn-easy" class="py-2 rounded-xl text-xs font-bold transition bg-purple-600 text-white">Fácil (3)</button>
+                <button type="button" onclick="selectMinesLevel('medium')" id="level-btn-medium" class="py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400">Medio (6)</button>
+                <button type="button" onclick="selectMinesLevel('hard')" id="level-btn-hard" class="py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400">Difícil (9)</button>
+                <button type="button" onclick="selectMinesLevel('expert')" id="level-btn-expert" class="py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400">Experto (12)</button>
             </div>
 
             <div class="bg-black/40 p-4 rounded-2xl border border-zinc-800/80 flex justify-between items-center text-center">
@@ -360,10 +360,30 @@
             </div>
         </div>
 
-        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
-            <h3 class="font-semibold mb-4">Retirar fondos</h3>
-            <input id="withdrawAddress" type="text" placeholder="Dirección TRON (TRC20)" class="w-full bg-black border border-zinc-700 rounded-2xl px-4 py-4 text-sm text-white outline-none">
-            <button id="withdrawBtn" class="w-full mt-4 bg-gradient-to-r from-amber-500 to-yellow-500 py-4 rounded-2xl font-bold text-black">RETIRAR TODO</button>
+        <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800 space-y-4">
+            <h3 class="font-semibold">Retirar fondos</h3>
+            
+            <div class="bg-black/40 p-2.5 rounded-2xl border border-zinc-800/80">
+                <p class="text-zinc-400 text-[11px] uppercase font-bold tracking-wider mb-2">Selecciona el método de retiro:</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="btn-withdraw-direct" class="py-2.5 bg-amber-500 text-black rounded-xl font-bold border border-amber-400 text-xs transition-all flex items-center justify-center gap-1" onclick="cambiarMetodoRetiro('directo')">
+                        <i class="fas fa-wallet"></i> Billetera Directa
+                    </button>
+                    <button type="button" id="btn-withdraw-faucet" class="py-2.5 bg-zinc-800 text-zinc-400 rounded-xl font-bold border border-transparent text-xs transition-all flex items-center justify-center gap-1" onclick="cambiarMetodoRetiro('faucet')">
+                        <i class="fas fa-bolt"></i> FaucetPay
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <label id="lbl-withdraw-address" class="block text-xs text-zinc-400 font-medium mb-1.5">Dirección TRON (TRC20):</label>
+                <input id="withdrawAddress" type="text" placeholder="Dirección TRON (T...)" class="w-full bg-black border border-zinc-700 rounded-2xl px-4 py-4 text-sm text-white outline-none focus:border-amber-500 font-mono">
+                <p id="txt-withdraw-info" class="text-[11px] text-amber-400/90 mt-1.5 flex items-center gap-1">
+                    <i class="fas fa-info-circle"></i> Mínimo de retiro: 10.00 TRX (Aplica comisión de red)
+                </p>
+            </div>
+
+            <button id="withdrawBtn" class="w-full mt-2 bg-gradient-to-r from-amber-500 to-yellow-500 py-4 rounded-2xl font-bold text-black shadow-lg shadow-amber-500/10">RETIRAR TODO</button>
         </div>
 
         <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
@@ -386,27 +406,27 @@
 
     <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0b1120]/95 backdrop-blur-xl border-t border-zinc-800 z-50">
         <div class="nav-container">
-            <button class="nav-btn active" data-screen="mining">
+            <button type="button" class="nav-btn active" data-screen="mining">
                 <i class="fas fa-bolt"></i>
                 <span>Minado</span>
             </button>
-            <button class="nav-btn" data-screen="tasks">
+            <button type="button" class="nav-btn" data-screen="tasks">
                 <i class="fas fa-list-check"></i>
                 <span>Tareas</span>
             </button>
-            <button class="nav-btn" data-screen="mines">
+            <button type="button" class="nav-btn" data-screen="mines">
                 <i class="fas fa-bomb"></i>
                 <span>Minas</span>
             </button>
-            <button class="nav-btn" data-screen="friends">
+            <button type="button" class="nav-btn" data-screen="friends">
                 <i class="fas fa-users"></i>
                 <span>Amigos</span>
             </button>
-            <button class="nav-btn" data-screen="wallet">
+            <button type="button" class="nav-btn" data-screen="wallet">
                 <i class="fas fa-wallet"></i>
                 <span>Billetera</span>
             </button>
-            <button class="nav-btn" data-screen="profile">
+            <button type="button" class="nav-btn" data-screen="profile">
                 <i class="fas fa-user"></i>
                 <span>Perfil</span>
             </button>
@@ -420,7 +440,8 @@
         const SUPABASE_BASE_URL = "https://gmyysxuszqwhsbuglvos.supabase.co/";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdteXlzeHVzenF3aHNidWdsdm9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODExOTQsImV4cCI6MjA5NjM1NzE5NH0.C-1TCD8BG-GJtJl6hxJGmo60rqyNee4Q_bsEebRIveQ";
         
-        const MIN_WITHDRAW = 0.01;
+        let currentMinWithdraw = 10.0;
+        let metodoRetiroSeleccionado = 'directo';
 
         let currentUser = null;
         let telegramUserId = null;
@@ -507,7 +528,7 @@
             }
         }
 
-        // Función de Inicialización del Usuario - MODIFICADA PARA TRABAJAR CON EL RPC DE REFERIDOS
+        // Función de Inicialización del Usuario
         async function initUser() {
             let referredBy = null;
             let initData = "";
@@ -534,7 +555,6 @@
             if (referredBy == telegramUserId) referredBy = null;
 
             try {
-                // Intentamos la autenticación por Edge Function
                 const authResponse = await supabaseRequest("functions/v1/telegram-auth", "POST", {
                     initData: initData,
                     referredBy: referredBy
@@ -547,13 +567,11 @@
                 console.warn("⚠️ Fallback auth local activo.");
             }
 
-            // Consultamos la tabla de usuarios de manera síncrona
             let users = await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`);
             
             if (users && users.length > 0) {
                 currentUser = users[0];
             } else {
-                // Si es un usuario nuevo, lo creamos
                 const newUser = {
                     telegram_id: telegramUserId,
                     username: `user_${telegramUserId}`,
@@ -566,51 +584,21 @@
                 currentUser = (created && created.length > 0) ? created[0] : newUser;
 
                 if (referredBy) {
-                    const invitadorId = parseInt(referredBy);
-
-                    // 1. LLAMADA RPC: Ejecutamos de forma segura la función creada en tu SQL de Supabase
-                    await supabaseRequest("rpc/incrementar_referido", "POST", {
-                        invitador_id: invitadorId
-                    });
-
-                    // 2. RECOMPENSA DE GANANCIAS: Otorgamos un bono al invitador (por ejemplo, 0.05 TRX)
-                    const bonoComision = 0.05000;
-
-                    // 3. REGISTRO EN EL HISTORIAL: Insertamos la transacción para que aparezca en la pestaña "Amigos"
-                    await supabaseRequest("referral_commissions", "POST", {
-                        referrer_id: invitadorId,
-                        referred_user_id: telegramUserId,
-                        amount: bonoComision
-                    });
-
-                    // 4. ACTUALIZACIÓN DEL BALANCE: Sumamos la comisión directamente al saldo del invitador
-                    const refUsers = await supabaseRequest(`users?telegram_id=eq.${invitadorId}`);
+                    const refUsers = await supabaseRequest(`users?telegram_id=eq.${referredBy}`);
                     if (refUsers && refUsers.length > 0) {
-                        const nuevoBalance = (parseFloat(refUsers[0].balance) || 0) + bonoComision;
-                        await supabaseRequest(`users?telegram_id=eq.${invitadorId}`, "PATCH", {
-                            balance: parseFloat(nuevoBalance.toFixed(5))
+                        await supabaseRequest(`users?telegram_id=eq.${referredBy}`, "PATCH", {
+                            referrals_count: (refUsers[0].referrals_count || 0) + 1
                         });
                     }
                 }
             }
 
-            // CARGA REAL DESDE LA BASE DE DATOS TRAS VALIDAR EL REGISTRO
             if (currentUser) {
                 balance = parseFloat(currentUser.balance) || 0;
                 totalMined = parseFloat(currentUser.total_mined) || 0;
             }
             
-            // Forzamos actualización de la UI con los datos reales recuperados
             updateUI();
-
-            // Cargar script de Monetag de fondo de forma segura
-            setTimeout(() => {
-                const adScript = document.createElement('script');
-                adScript.src = '//libtl.com/sdk.js';
-                adScript.setAttribute('data-zone', '11119512');
-                adScript.setAttribute('data-sdk', 'show_11119512');
-                document.head.appendChild(adScript);
-            }, 800);
         }
 
         function getReferralLink() {
@@ -758,10 +746,38 @@
             }
         }
 
+        function cambiarMetodoRetiro(metodo) {
+            metodoRetiroSeleccionado = metodo;
+            const btnDirecto = document.getElementById('btn-withdraw-direct');
+            const btnFaucet = document.getElementById('btn-withdraw-faucet');
+            const lblDireccion = document.getElementById('lbl-withdraw-address');
+            const inputAddress = document.getElementById('withdrawAddress');
+            const txtInfo = document.getElementById('txt-withdraw-info');
+
+            if (metodo === 'directo') {
+                btnDirecto.className = "py-2.5 bg-amber-500 text-black rounded-xl font-bold border border-amber-400 text-xs transition-all flex items-center justify-center gap-1";
+                btnFaucet.className = "py-2.5 bg-zinc-800 text-zinc-400 rounded-xl font-bold border border-transparent text-xs transition-all flex items-center justify-center gap-1";
+                lblDireccion.innerText = "Dirección TRON (TRC20):";
+                inputAddress.placeholder = "Dirección TRON (T...)";
+                txtInfo.innerHTML = '<i class="fas fa-info-circle"></i> Mínimo de retiro: 10.00 TRX (Aplica comisión de red)';
+                currentMinWithdraw = 10.0;
+            } else {
+                btnFaucet.className = "py-2.5 bg-amber-500 text-black rounded-xl font-bold border border-amber-400 text-xs transition-all flex items-center justify-center gap-1";
+                btnDirecto.className = "py-2.5 bg-zinc-800 text-zinc-400 rounded-xl font-bold border border-transparent text-xs transition-all flex items-center justify-center gap-1";
+                lblDireccion.innerText = "Correo Electrónico de FaucetPay:";
+                inputAddress.placeholder = "usuario@correo.com";
+                txtInfo.innerHTML = '<i class="fas fa-bolt"></i> Mínimo de retiro: 0.10 TRX (Instantáneo sin comisiones)';
+                currentMinWithdraw = 0.1;
+            }
+        }
+
         async function requestWithdraw() {
             const address = document.getElementById('withdrawAddress').value.trim();
-            if (!address) { alert("Ingrese una dirección TRC20"); return; }
-            if (balance < MIN_WITHDRAW) { alert(`El retiro mínimo es ${MIN_WITHDRAW} TRX`); return; }
+            if (!address) { 
+                alert(metodoRetiroSeleccionado === 'directo' ? "Ingrese una dirección TRC20" : "Ingrese su correo de FaucetPay"); 
+                return; 
+            }
+            if (balance < currentMinWithdraw) { alert(`El retiro mínimo para este método es de ${currentMinWithdraw} TRX`); return; }
 
             const amount = balance;
             
@@ -776,7 +792,8 @@
                     body: JSON.stringify({
                         telegramUserId: telegramUserId,
                         address: address,
-                        amount: amount
+                        amount: amount,
+                        method: metodoRetiroSeleccionado
                     })
                 });
 
@@ -789,13 +806,15 @@
                 balance = Number(result.newBalance) || 0;
                 updateUI();
                 await loadWithdrawHistory();
-                alert("✅ Solicitud de retiro procesada y guardada correctamente.");
+                alert("✅ Solicitud de retiro procesada correctamente.");
+                document.getElementById('withdrawAddress').value = "";
             } catch (e) {
                 alert(`❌ Error en retiro: ${e.message}`);
             }
         }
 
         async function loadWithdrawHistory() {
+            if (!telegramUserId) return;
             const container = document.getElementById('withdrawHistory');
             if (!container) return;
             try {
@@ -968,8 +987,8 @@
                                     <div class="text-[10px] text-purple-400 font-medium">+${task.reward} TRX</div>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="openSocialTaskLink('${task.id}', '${task.url}')" id="btn-open-${task.id}" class="bg-purple-600 text-white text-[11px] px-3 py-1.5 rounded-xl font-semibold transition">Abrir</button>
-                                    <button onclick="claimSocialTask('${task.id}', ${task.reward})" id="btn-claim-${task.id}" disabled class="bg-zinc-700 text-zinc-400 text-[11px] px-3 py-1.5 rounded-xl font-semibold opacity-50 cursor-not-allowed transition">Reclamar</button>
+                                    <button type="button" onclick="openSocialTaskLink('${task.id}', '${task.url}')" id="btn-open-${task.id}" class="bg-purple-600 text-white text-[11px] px-3 py-1.5 rounded-xl font-semibold transition">Abrir</button>
+                                    <button type="button" onclick="claimSocialTask('${task.id}', ${task.reward})" id="btn-claim-${task.id}" disabled class="bg-zinc-700 text-zinc-400 text-[11px] px-3 py-1.5 rounded-xl font-semibold opacity-50 cursor-not-allowed transition">Reclamar</button>
                                 </div>
                             </div>
                         `;
@@ -1008,7 +1027,7 @@
             balance = Number(balance) + rewardAmount;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
             updateUI();
-            alert(`✅ Recompensa de ${rewardAmount} TRX añadida.`);
+            alert(`Base de datos actualizada. Recompensa de ${rewardAmount} TRX añadida.`);
             await loadSocialTasks();
         }
 
@@ -1035,7 +1054,7 @@
                     if (isClaimed) {
                         btnHTML = `<span class="text-[11px] text-zinc-500 font-bold bg-zinc-800/40 px-3 py-1 rounded-xl border border-zinc-800">RECLAMADO</span>`;
                     } else if (countRefs >= ms.req) {
-                        btnHTML = `<button onclick="claimMilestoneBonus(${ms.id}, ${ms.reward})" class="bg-gradient-to-r from-emerald-500 to-green-600 text-black text-[11px] px-3 py-1.5 rounded-xl font-bold active:scale-95 transition">Reclamar</button>`;
+                        btnHTML = `<button type="button" onclick="claimMilestoneBonus(${ms.id}, ${ms.reward})" class="bg-gradient-to-r from-emerald-500 to-green-600 text-black text-[11px] px-3 py-1.5 rounded-xl font-bold active:scale-95 transition">Reclamar</button>`;
                     } else {
                         btnHTML = `<span class="text-[10px] text-zinc-400 font-medium bg-black/40 px-2.5 py-1 rounded-lg border border-zinc-800">${countRefs}/${ms.req} Amigos</span>`;
                     }
@@ -1084,7 +1103,7 @@
 
                 balance = Number(result.balance) || 0;
                 updateUI();
-                alert(`🎉 ¡Bono de ${reward} TRX cobrado con éxito en el servidor!`);
+                alert(`🎉 ¡Bono de ${reward} TRX cobrado con éxito!`);
                 await loadReferralMilestones();
             } catch (e) {
                 alert(`❌ Error: ${e.message}`);
@@ -1154,7 +1173,7 @@
             balance = Number(balance) + rewardAmount;
             await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
             updateUI();
-            alert(`@📆 Check-In exitoso: +${rewardAmount} TRX.`);
+            alert(`📆 Check-In exitoso: +${rewardAmount} TRX.`);
             await loadDailyCheckIn();
         }
 
@@ -1423,6 +1442,7 @@
             }
         }
 
+        // LÓGICA DE CAMBIO DE PESTAÑAS (FIABLE E INSTANTÁNEA)
         function switchScreen(screen) {
             document.querySelectorAll('.app-screen').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -1451,20 +1471,27 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        // === CORRECCIÓN PRINCIPAL EN FUNCIÓN INIT ===
+        async function init() {
+            // 1. Vinculamos de inmediato los escuchadores de la barra de navegación (EVITA QUE SE CONGELE)
             document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.onclick = (e) => {
+                btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     const screenName = btn.getAttribute('data-screen');
-                    if (screenName) {
-                        switchScreen(screenName);
-                    }
-                };
+                    if (screenName) switchScreen(screenName);
+                });
             });
-        });
 
-        // === FUNCIÓN INIT OPTIMIZADA ===
-        async function init() {
+            // 2. Vinculamos el resto de elementos interactivos de la UI estática
+            mineBtn.addEventListener('click', mine);
+            document.getElementById('withdrawBtn').addEventListener('click', requestWithdraw);
+            document.getElementById('spinWheelBtn').addEventListener('click', spinWheel);
+            document.getElementById('claimDailyBtn').addEventListener('click', executeDailyCheckIn);
+            document.getElementById('refillEnergyBtn').addEventListener('click', watchMonetagAdForEnergy);
+            document.getElementById('startMinesGameBtn').addEventListener('click', initMinesGame);
+            document.getElementById('minesCashoutBtn').addEventListener('click', cashoutMinesReward);
+
+            // 3. Inicializaciones visuales locales e intervalos
             if (window.Adsgram) {
                 AdController = window.Adsgram.init({ blockId: "34461", debug: false });
             }
@@ -1475,29 +1502,18 @@
             updateTimer();
             timerInterval = setInterval(updateTimer, 1000);
             setInterval(updateMinesEnergySystem, 1000);
+            renderEmptyBoard();
+            updateMinesEnergySystem();
 
-            mineBtn.addEventListener('click', mine);
-            document.getElementById('withdrawBtn').addEventListener('click', requestWithdraw);
-
-            // 1. ESPERAMOS OBLIGATORIAMENTE a que cargue el usuario e inyecte los balances reales
+            // 4. Lanzamos la carga asíncrona de datos de usuario en segundo plano
             await initUser();
 
-            // 2. UNA VEZ CARGADO EL BALANCE, preparamos las llamadas secundarias de las pestañas
+            // 5. Cargamos datos de bases de datos secundarios una vez tenemos el telegramUserId
             loadReferrals();
             loadWithdrawHistory();
             loadSpinHistory();
             loadMinesHistory();
             loadCommissionHistory();
-
-            document.getElementById('spinWheelBtn').addEventListener('click', spinWheel);
-            document.getElementById('claimDailyBtn').addEventListener('click', executeDailyCheckIn);
-
-            renderEmptyBoard();
-            updateMinesEnergySystem();
-            
-            document.getElementById('refillEnergyBtn').addEventListener('click', watchMonetagAdForEnergy);
-            document.getElementById('startMinesGameBtn').addEventListener('click', initMinesGame);
-            document.getElementById('minesCashoutBtn').addEventListener('click', cashoutMinesReward);
         }
 
         window.onload = init;
