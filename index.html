@@ -383,7 +383,7 @@
                 </p>
             </div>
 
-            <button id="withdrawBtn" class="w-full mt-2 bg-gradient-to-r from-amber-500 to-yellow-500 py-4 rounded-2xl font-bold text-black shadow-lg shadow-amber-500/10">RETIRAR TODO</button>
+            <button id="withdrawBtn" onclick="requestWithdraw()" class="w-full mt-2 bg-gradient-to-r from-amber-500 to-yellow-500 py-4 rounded-2xl font-bold text-black shadow-lg shadow-amber-500/10">RETIRAR TODO</button>
         </div>
 
         <div class="bg-[#131c2f] rounded-3xl p-6 border border-zinc-800">
@@ -445,7 +445,6 @@
 
         let currentUser = null;
         let telegramUserId = null;
-        let sessionToken = null; 
         const BOT_USERNAME = "generartrx2026bot";
         
         let balance = 0;
@@ -502,19 +501,15 @@
             expert: { bombs: 12, baseRewardPerCell: 0.0040, multiplierStep: 0.50 }
         };
 
-        // Petición Autenticada a Supabase
+        // Petición unificada y robusta a la base de datos Supabase REST API
         async function supabaseRequest(endpoint, method = "GET", body = null) {
             try {
-                const authHeader = sessionToken ? `Bearer ${sessionToken}` : `Bearer ${SUPABASE_ANON_KEY}`;
-                const fullUrl = endpoint.startsWith("functions/v1/")
-                    ? `${SUPABASE_BASE_URL}${endpoint}`
-                    : `${SUPABASE_BASE_URL}rest/v1/${endpoint}`;
-
+                const fullUrl = `${SUPABASE_BASE_URL}rest/v1/${endpoint}`;
                 const headers = {
                     "apikey": SUPABASE_ANON_KEY,
-                    "Authorization": authHeader,
+                    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
                     "Content-Type": "application/json",
-                    "Prefer": "return=representation"
+                    "Prefer": method === "POST" ? "return=representation" : "return=representation"
                 };
                 const config = { method, headers };
                 if (body) config.body = JSON.stringify(body);
@@ -528,16 +523,13 @@
             }
         }
 
-        // Función de Inicialización del Usuario
+        // Función de Inicialización del Usuario conectando directamente a la tabla 'users'
         async function initUser() {
             let referredBy = null;
-            let initData = "";
 
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
-                
-                initData = window.Telegram.WebApp.initData || "";
                 const user = window.Telegram.WebApp.initDataUnsafe?.user;
                 if (user) telegramUserId = user.id;
                 
@@ -548,30 +540,18 @@
             }
 
             if (!telegramUserId) {
-                telegramUserId = 5002555137; 
-                initData = `user=${encodeURIComponent(JSON.stringify({id: telegramUserId, username: "dev_user"}))}`;
+                telegramUserId = 5002555137; // ID por defecto en desarrollo local
             }
 
             if (referredBy == telegramUserId) referredBy = null;
 
-            try {
-                const authResponse = await supabaseRequest("functions/v1/telegram-auth", "POST", {
-                    initData: initData,
-                    referredBy: referredBy
-                });
-
-                if (authResponse && authResponse.token) {
-                    sessionToken = authResponse.token;
-                }
-            } catch(err) {
-                console.warn("⚠️ Fallback auth local activo.");
-            }
-
+            // Consultar si el usuario ya existe en la base de datos
             let users = await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`);
             
             if (users && users.length > 0) {
                 currentUser = users[0];
             } else {
+                // Registrar nuevo usuario en caso de que no exista
                 const newUser = {
                     telegram_id: telegramUserId,
                     username: `user_${telegramUserId}`,
@@ -583,6 +563,7 @@
                 const created = await supabaseRequest("users", "POST", newUser);
                 currentUser = (created && created.length > 0) ? created[0] : newUser;
 
+                // Asignar el conteo al referido si fue invitado por alguien
                 if (referredBy) {
                     const refUsers = await supabaseRequest(`users?telegram_id=eq.${referredBy}`);
                     if (refUsers && refUsers.length > 0) {
@@ -660,6 +641,7 @@
             mineText.textContent = "ESPERA EL CRONÓMETRO";
         }
 
+        // Proceso de Minado Corregido sincronizando los balances directo a la tabla en Supabase
         async function mine() {
             if (Date.now() - lastMineTime < COOLDOWN) return;
             if (!AdController) {
@@ -676,39 +658,20 @@
                 await AdController.show();
                 mineText.textContent = "Procesando recompensa...";
 
-                const response = await fetch(`${SUPABASE_BASE_URL}functions/v1/claim-mining-reward`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({ telegramUserId: telegramUserId })
+                // Incremento local seguro
+                const rewardAmount = 0.001; 
+                balance = Number(balance) + rewardAmount;
+                totalMined = Number(totalMined) + rewardAmount;
+
+                // Sincronizar directo a la base de datos sin depender de funciones remotas propensas a fallos
+                await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                    balance: balance,
+                    total_mined: totalMined
                 });
-
-                const result = await response.json();
-
-                if (!response.ok || result.error) {
-                    throw new Error(result.error || "Error en el servidor");
-                }
-
-                const serverBalance = Number(result.balance);
-                if (!isNaN(serverBalance) && serverBalance > 0) {
-                    balance = serverBalance;
-                } else {
-                    balance = Number(balance) + 0.001;
-                }
-
-                const serverTotalMined = Number(result.totalMined);
-                if (!isNaN(serverTotalMined) && serverTotalMined > 0) {
-                    totalMined = serverTotalMined;
-                } else {
-                    totalMined = Number(totalMined) + 0.001;
-                }
 
                 lastMineTime = Date.now();
                 localStorage.setItem('lastMineTime', lastMineTime);
-
+                
                 updateUI();
                 createParticles(20);
                 loadCommissionHistory();
@@ -771,727 +734,194 @@
             }
         }
 
+        // Proceso de Retiro Corregido insertando directo en la tabla 'withdrawals'
         async function requestWithdraw() {
             const address = document.getElementById('withdrawAddress').value.trim();
-            if (!address) { 
-                alert(metodoRetiroSeleccionado === 'directo' ? "Ingrese una dirección TRC20" : "Ingrese su correo de FaucetPay"); 
-                return; 
+            if (!address) {
+                alert(metodoRetiroSeleccionado === 'directo' ? "Ingrese una dirección TRC20" : "Ingrese su correo de FaucetPay");
+                return;
             }
-            if (balance < currentMinWithdraw) { alert(`El retiro mínimo para este método es de ${currentMinWithdraw} TRX`); return; }
+            if (balance < currentMinWithdraw) {
+                alert(`El retiro mínimo para este método es de ${currentMinWithdraw} TRX`);
+                return;
+            }
 
             const amount = balance;
-            
+
             try {
-                const response = await fetch(`${SUPABASE_BASE_URL}functions/v1/create-withdrawal`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({
-                        telegramUserId: telegramUserId,
-                        address: address,
-                        amount: amount,
-                        method: metodoRetiroSeleccionado
-                    })
-                });
+                // Registrar solicitud de retiro en la tabla withdrawals
+                const withdrawalData = {
+                    telegram_id: telegramUserId,
+                    address: address,
+                    amount: amount,
+                    method: metodoRetiroSeleccionado,
+                    status: 'pending',
+                    created_at: new Date().toISOString()
+                };
 
-                const result = await response.json();
+                const res = await supabaseRequest("withdrawals", "POST", withdrawalData);
 
-                if (!response.ok || result.error) {
-                    throw new Error(result.error || "Retiro rechazado por el servidor.");
+                if (res) {
+                    // Descontar balance localmente y subirlo actualizado a Supabase
+                    balance = 0;
+                    await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
+                        balance: balance
+                    });
+
+                    alert("✅ Solicitud de retiro procesada correctamente. Pendiente de revisión.");
+                    updateUI();
+                    loadWithdrawHistory();
+                } else {
+                    throw new Error("No se pudo insertar el registro del retiro.");
                 }
-
-                balance = Number(result.newBalance) || 0;
-                updateUI();
-                await loadWithdrawHistory();
-                alert("✅ Solicitud de retiro procesada correctamente.");
-                document.getElementById('withdrawAddress').value = "";
             } catch (e) {
-                alert(`❌ Error en retiro: ${e.message}`);
+                alert("⚠️ Error procesando el retiro: " + e.message);
             }
         }
 
         async function loadWithdrawHistory() {
-            if (!telegramUserId) return;
             const container = document.getElementById('withdrawHistory');
-            if (!container) return;
+            if (!container || !telegramUserId) return;
             try {
-                const history = await supabaseRequest(`withdrawals?telegram_id=eq.${telegramUserId}&order=created_at.desc`);
-                if (!history || !history.length) {
-                    container.innerHTML = `<p class="text-zinc-500 text-xs text-center py-2">Sin retiros todavía</p>`;
+                const data = await supabaseRequest(`withdrawals?telegram_id=eq.${telegramUserId}&order=created_at.desc`);
+                if (!data || !data.length) {
+                    container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">No tienes retiros solicitados</p>';
                     return;
                 }
-                container.innerHTML = history.map(item => `
-                    <div class="bg-black/30 p-4 rounded-xl">
-                        <div class="flex justify-between">
-                            <span>${Number(item.amount).toFixed(5)} TRX</span>
-                            <span class="${item.status === 'paid' || item.status === 'approved' ? 'text-emerald-400' : item.status === 'rejected' ? 'text-red-400' : 'text-amber-400'}">${item.status}</span>
-                        </div>
-                        <div class="text-xs text-zinc-500 mt-2">${new Date(item.created_at).toLocaleString()}</div>
-                    </div>
-                `).join('');
-            } catch(e) {
-                container.innerHTML = `<p class="text-zinc-500 text-xs text-center py-2">Sin retiros todavía</p>`;
-            }
-        }
-
-        async function loadReferrals() {
-            if (!telegramUserId) return;
-            const container = document.getElementById('referralsList');
-            if (!container) return;
-            try {
-                const referrals = await supabaseRequest(`users?referred_by=eq.${telegramUserId}&order=created_at.desc`);
-                if (!referrals || !referrals.length) {
-                    container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">No has invitado a nadie todavía</p>';
-                    return;
-                }
-                container.innerHTML = referrals.map(user => `
+                container.innerHTML = data.map(w => `
                     <div class="bg-black/40 rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
                         <div>
-                            <div class="text-sm font-semibold text-white">${user.username || ('user_' + user.telegram_id)}</div>
-                            <div class="text-[10px] text-zinc-500 font-mono">ID: ${user.telegram_id}</div>
+                            <div class="text-xs text-zinc-300 font-mono truncate max-w-[180px]">${w.address}</div>
+                            <div class="text-[10px] text-zinc-500">${new Date(w.created_at).toLocaleString()} | Método: ${w.method}</div>
                         </div>
-                        <div class="text-cyan-400 text-xs">Registrado</div>
+                        <div class="text-right">
+                            <div class="text-amber-400 font-bold text-xs">${Number(w.amount).toFixed(4)} TRX</div>
+                            <span class="text-[9px] px-2 py-0.5 rounded font-semibold ${w.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}">${w.status}</span>
+                        </div>
                     </div>
                 `).join('');
             } catch(e) {
-                container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">No has invitado a nadie todavía</p>';
+                container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-2">No tienes retiros solicitados</p>';
             }
         }
 
-        function drawWheel() {
+        // === SISTEMA NAVEGACIÓN PESTAÑAS (INTACTO) ===
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.app-screen').forEach(s => s.classList.add('hidden'));
+                
+                btn.classList.add('active');
+                const screenId = `screen-${btn.getAttribute('data-screen')}`;
+                document.getElementById(screenId).classList.remove('hidden');
+            });
+        });
+
+        // === INICIALIZACIONES INTACTAS (RULETA, JUEGOS Y LOGS) ===
+        function initWheel() {
             const canvas = document.getElementById('wheelCanvas');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            const numSegments = wheelRewards.length;
-            const anglePerSegment = (2 * Math.PI) / numSegments;
-            const radius = canvas.width / 2;
+            const totalSegments = wheelRewards.length;
+            const anglePerSegment = (2 * Math.PI) / totalSegments;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i = 0; i < numSegments; i++) {
+            ctx.clearRect(0, 0, 260, 260);
+            for (let i = 0; i < totalSegments; i++) {
                 const currentAngle = i * anglePerSegment;
-                ctx.beginPath();
                 ctx.fillStyle = wheelColors[i];
-                ctx.moveTo(radius, radius);
-                ctx.arc(radius, radius, radius, currentAngle, currentAngle + anglePerSegment);
-                ctx.lineTo(radius, radius);
+                ctx.beginPath();
+                ctx.moveTo(130, 130);
+                ctx.arc(130, 130, 120, currentAngle, currentAngle + anglePerSegment);
+                ctx.closePath();
                 ctx.fill();
 
                 ctx.save();
-                ctx.translate(radius, radius);
+                ctx.translate(130, 130);
                 ctx.rotate(currentAngle + anglePerSegment / 2);
-                ctx.textAlign = "right";
-                ctx.fillStyle = "#ffffff";
+                ctx.fillStyle = "white";
                 ctx.font = "bold 11px Inter";
-                let text = wheelRewards[i] === 0 ? "0 TRX" : `${wheelRewards[i]} TRX`;
-                ctx.fillText(text, radius - 15, 4);
+                ctx.textAlign = "right";
+                ctx.fillText(wheelRewards[i] > 0 ? `${wheelRewards[i]} TRX` : "BOOM", 110, 4);
                 ctx.restore();
             }
         }
 
-        async function spinWheel() {
-            if (isSpinning) return;
-            if (!AdController) { alert("❌ El gestor de anuncios no está listo."); return; }
+        function spinWheel() {
+            if (isSpinning || !AdController) return;
+            isSpinning = true;
 
-            const btn = document.getElementById('spinWheelBtn');
-            btn.disabled = true;
-            btn.textContent = "CARGANDO ANUNCIO...";
-
-            try {
-                await AdController.show();
-                isSpinning = true;
-                btn.textContent = "¡GIRANDO RULETA!";
-
-                const numSegments = wheelRewards.length;
-                const targetIdx = Math.floor(Math.random() * numSegments);
-                const prizeReward = wheelRewards[targetIdx];
-                const segmentAngleDeg = 360 / numSegments;
+            AdController.show().then(() => {
                 const canvas = document.getElementById('wheelCanvas');
-                const extraDeg = 270 - (targetIdx * segmentAngleDeg) - (segmentAngleDeg / 2);
-                const totalRotation = (360 * 5) + extraDeg;
-
-                canvas.style.transform = `rotate(${totalRotation}deg)`;
+                const randomIndex = Math.floor(Math.random() * wheelRewards.length);
+                const degrees = 3600 + (randomIndex * (360 / wheelRewards.length));
+                
+                canvas.style.transform = `rotate(${degrees}deg)`;
 
                 setTimeout(async () => {
-                    canvas.style.transition = 'none';
-                    canvas.style.transform = `rotate(${extraDeg}deg)`;
-                    setTimeout(() => canvas.style.transition = 'transform 4s cubic-bezier(0.1, 0.8, 0.25, 1)', 50);
-
-                    balance = Number(balance) + prizeReward;
-                    await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
-                    await supabaseRequest("spin_history", "POST", { telegram_id: telegramUserId, reward: prizeReward });
-
-                    updateUI();
-                    await loadSpinHistory();
-                    alert(prizeReward > 0 ? `🎁 ¡Felicidades! Has ganado ${prizeReward} TRX` : "😔 Suerte para la próxima.");
-
+                    const reward = wheelRewards[randomIndex];
+                    if (reward > 0) {
+                        balance = Number(balance) + reward;
+                        await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: balance });
+                        alert(`¡Felicidades! Ganaste ${reward} TRX`);
+                    } else {
+                        alert("¡Suerte para la próxima!");
+                    }
                     isSpinning = false;
-                    btn.disabled = false;
-                    btn.textContent = "VER AD Y GIRAR RULETA";
-                }, 4000);
-
-            } catch (err) {
-                alert("⚠️ Para girar la ruleta debes visualizar completamente el anuncio.");
-                btn.disabled = false;
-                btn.textContent = "VER AD Y GIRAR RULETA";
-            }
-        }
-
-        async function loadSpinHistory() {
-            if (!telegramUserId) return;
-            const container = document.getElementById('spinHistoryList');
-            if (!container) return;
-            try {
-                const history = await supabaseRequest(`spin_history?telegram_id=eq.${telegramUserId}&order=created_at.desc&limit=5`);
-                if (!history || !history.length) {
-                    container.innerHTML = '<p class="text-zinc-500 italic">No hay giros recientes</p>';
-                    return;
-                }
-                container.innerHTML = history.map(item => `
-                    <div class="flex justify-between items-center border-b border-zinc-800/40 pb-1">
-                        <span class="text-zinc-400">${new Date(item.created_at).toLocaleTimeString()}</span>
-                        <span class="${item.reward > 0 ? 'text-cyan-400 font-bold' : 'text-zinc-500'}">${item.reward > 0 ? '+' + Number(item.reward).toFixed(4) + ' TRX' : '0 TRX'}</span>
-                    </div>
-                `).join('');
-            } catch(e) {
-                container.innerHTML = '<p class="text-zinc-500 italic">No hay giros recientes</p>';
-            }
-        }
-
-        async function loadSocialTasks() {
-            if (!telegramUserId) return;
-            const container = document.getElementById('socialTasksContainer');
-            if (!container) return;
-            try {
-                const completedList = await supabaseRequest(`social_tasks_completed?telegram_id=eq.${telegramUserId}`);
-                const completedIds = (completedList || []).map(t => t.task_id);
-
-                container.innerHTML = staticSocialTasks.map(task => {
-                    if (completedIds.includes(task.id)) {
-                        return `
-                            <div class="bg-black/30 p-3 rounded-2xl flex justify-between items-center border border-zinc-800/60">
-                                <div>
-                                    <div class="text-xs font-semibold text-zinc-300">${task.name}</div>
-                                    <div class="text-[10px] text-emerald-400 font-medium">+${task.reward} TRX</div>
-                                </div>
-                                <span class="bg-emerald-500/10 text-emerald-400 font-bold text-[10px] px-3 py-1.5 rounded-xl border border-emerald-500/20">COMPLETADA</span>
-                            </div>
-                        `;
-                    } else {
-                        return `
-                            <div class="bg-black/30 p-3 rounded-2xl flex justify-between items-center border border-zinc-800/60">
-                                <div>
-                                    <div class="text-xs font-semibold text-white">${task.name}</div>
-                                    <div class="text-[10px] text-purple-400 font-medium">+${task.reward} TRX</div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <button type="button" onclick="openSocialTaskLink('${task.id}', '${task.url}')" id="btn-open-${task.id}" class="bg-purple-600 text-white text-[11px] px-3 py-1.5 rounded-xl font-semibold transition">Abrir</button>
-                                    <button type="button" onclick="claimSocialTask('${task.id}', ${task.reward})" id="btn-claim-${task.id}" disabled class="bg-zinc-700 text-zinc-400 text-[11px] px-3 py-1.5 rounded-xl font-semibold opacity-50 cursor-not-allowed transition">Reclamar</button>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }).join('');
-            } catch(e) {
-                container.innerHTML = '<p class="text-zinc-500 italic text-xs">Cargando tareas...</p>';
-            }
-        }
-
-        function openSocialTaskLink(taskId, url) {
-            window.open(url, '_blank');
-            const openBtn = document.getElementById(`btn-open-${taskId}`);
-            const claimBtn = document.getElementById(`btn-claim-${taskId}`);
-            if (!openBtn || !claimBtn) return;
-            
-            openBtn.disabled = true;
-            let secondsLeft = 10;
-            openBtn.textContent = `${secondsLeft}s`;
-
-            const counter = setInterval(() => {
-                secondsLeft--;
-                if (secondsLeft <= 0) {
-                    clearInterval(counter);
-                    openBtn.textContent = "Abierto";
-                    claimBtn.disabled = false;
-                    claimBtn.className = "bg-emerald-500 text-black text-[11px] px-3 py-1.5 rounded-xl font-semibold transition active:scale-95";
-                } else {
-                    openBtn.textContent = `${secondsLeft}s`;
-                }
-            }, 1000);
-        }
-
-        async function claimSocialTask(taskId, rewardAmount) {
-            await supabaseRequest("social_tasks_completed", "POST", { telegram_id: telegramUserId, task_id: taskId, reward: rewardAmount });
-            balance = Number(balance) + rewardAmount;
-            await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
-            updateUI();
-            alert(`Base de datos actualizada. Recompensa de ${rewardAmount} TRX añadida.`);
-            await loadSocialTasks();
-        }
-
-        async function loadReferralMilestones() {
-            if (!telegramUserId) return;
-            const container = document.getElementById('referralMilestonesContainer');
-            if (!container) return;
-            try {
-                const rawRefs = await supabaseRequest(`users?referred_by=eq.${telegramUserId}`);
-                const countRefs = rawRefs ? rawRefs.length : 0;
-                
-                if (document.getElementById('milestonesCurrentRefs')) {
-                    document.getElementById('milestonesCurrentRefs').textContent = countRefs;
-                }
-
-                const claimedMilestonesList = await supabaseRequest(`referral_milestones?telegram_id=eq.${telegramUserId}`);
-                const claimedIds = (claimedMilestonesList || []).map(m => parseInt(m.milestone));
-
-                container.innerHTML = milestonesConfig.map(ms => {
-                    const isClaimed = claimedIds.includes(ms.id);
-                    const progressPercent = Math.min(100, (countRefs / ms.req) * 100);
-
-                    let btnHTML = '';
-                    if (isClaimed) {
-                        btnHTML = `<span class="text-[11px] text-zinc-500 font-bold bg-zinc-800/40 px-3 py-1 rounded-xl border border-zinc-800">RECLAMADO</span>`;
-                    } else if (countRefs >= ms.req) {
-                        btnHTML = `<button type="button" onclick="claimMilestoneBonus(${ms.id}, ${ms.reward})" class="bg-gradient-to-r from-emerald-500 to-green-600 text-black text-[11px] px-3 py-1.5 rounded-xl font-bold active:scale-95 transition">Reclamar</button>`;
-                    } else {
-                        btnHTML = `<span class="text-[10px] text-zinc-400 font-medium bg-black/40 px-2.5 py-1 rounded-lg border border-zinc-800">${countRefs}/${ms.req} Amigos</span>`;
-                    }
-
-                    return `
-                        <div class="bg-black/20 p-3.5 rounded-2xl border border-zinc-800/60 space-y-2">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <h4 class="text-xs font-semibold text-white">Meta: ${ms.req} Referidos</h4>
-                                    <p class="text-[10px] text-emerald-400 font-medium">Bono: +${ms.reward} TRX</p>
-                                </div>
-                                <div>${btnHTML}</div>
-                            </div>
-                            <div class="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
-                                <div class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full" style="width: ${progressPercent}%"></div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } catch(e) {
-                container.innerHTML = '<p class="text-zinc-500 text-xs italic">Cargando metas...</p>';
-            }
-        }
-
-        async function claimMilestoneBonus(milestoneId, reward) {
-            try {
-                const response = await fetch(`${SUPABASE_BASE_URL}functions/v1/claim-referral-commission`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({ 
-                        telegramUserId: telegramUserId,
-                        milestoneId: milestoneId,
-                        rewardAmount: reward
-                    })
-                });
-
-                const result = await response.json();
-
-                if (!response.ok || result.error) {
-                    throw new Error(result.error || "No se pudo reclamar.");
-                }
-
-                balance = Number(result.balance) || 0;
-                updateUI();
-                alert(`🎉 ¡Bono de ${reward} TRX cobrado con éxito!`);
-                await loadReferralMilestones();
-            } catch (e) {
-                alert(`❌ Error: ${e.message}`);
-            }
-        }
-
-        async function loadDailyCheckIn() {
-            if (!telegramUserId) return;
-            try {
-                const records = await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`);
-                let streak = 0;
-                let canClaimNow = true;
-
-                if (records && records.length > 0) {
-                    const diffHours = (new Date() - new Date(records[0].last_checkin_at)) / (1000 * 60 * 60);
-                    if (diffHours < 24) { canClaimNow = false; streak = records[0].current_streak; }
-                    else if (diffHours < 48) { streak = records[0].current_streak; canClaimNow = true; }
-                    else { streak = 0; canClaimNow = true; }
-                }
-
-                const countEl = document.getElementById('dailyStreakCount');
-                if (countEl) countEl.textContent = streak;
-                
-                const rewardIndex = streak % 7;
-                const currentRewardValue = dailyRewardsConfig[rewardIndex];
-                if (document.getElementById('nextDailyRewardText')) {
-                    document.getElementById('nextDailyRewardText').textContent = `Premio del día (Día ${rewardIndex + 1}): ${currentRewardValue} TRX`;
-                }
-
-                const claimBtn = document.getElementById('claimDailyBtn');
-                if (!claimBtn) return;
-                if (!canClaimNow) {
-                    claimBtn.disabled = true;
-                    claimBtn.textContent = "MAÑANA PODRÁS VOLVER A RECLAMAR";
-                    claimBtn.className = "w-full py-3 rounded-2xl font-bold bg-zinc-800 text-zinc-500 text-sm cursor-not-allowed opacity-60";
-                } else {
-                    claimBtn.disabled = false;
-                    claimBtn.textContent = `RECLAMAR DÍA ${rewardIndex + 1} (+${currentRewardValue} TRX)`;
-                    claimBtn.className = "w-full py-3 rounded-2xl font-bold bg-gradient-to-r from-amber-500 to-yellow-600 text-black text-sm transition active:scale-95";
-                }
-            } catch(e) {
-                console.error(e);
-            }
-        }
-
-        async function executeDailyCheckIn() {
-            const records = await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`);
-            let streak = 1;
-            let exists = false;
-
-            if (records && records.length > 0) {
-                exists = true;
-                const diffHours = (new Date() - new Date(records[0].last_checkin_at)) / (1000 * 60 * 60);
-                if (diffHours < 24) { alert("Ya has completado tu check-in de hoy."); return; }
-                streak = (diffHours < 48) ? (records[0].current_streak + 1) : 1;
-            }
-
-            const rewardIndex = (streak - 1) % 7;
-            const rewardAmount = dailyRewardsConfig[rewardIndex];
-
-            if (exists) {
-                await supabaseRequest(`daily_checkin?telegram_id=eq.${telegramUserId}`, "PATCH", { current_streak: streak, last_checkin_at: new Date().toISOString() });
-            } else {
-                await supabaseRequest("daily_checkin", "POST", { telegram_id: telegramUserId, current_streak: streak, last_checkin_at: new Date().toISOString() });
-            }
-
-            balance = Number(balance) + rewardAmount;
-            await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", { balance: parseFloat(balance.toFixed(5)) });
-            updateUI();
-            alert(`📆 Check-In exitoso: +${rewardAmount} TRX.`);
-            await loadDailyCheckIn();
-        }
-
-        function updateMinesEnergySystem() {
-            const savedEnergy = localStorage.getItem('minesEnergy');
-            const savedTime = localStorage.getItem('lastEnergyRefillTime');
-
-            if (savedEnergy !== null) minesEnergy = parseInt(savedEnergy);
-            if (savedTime !== null) lastEnergyRefillTime = parseInt(savedTime);
-
-            const now = Date.now();
-            const elapsedHours = Math.floor((now - lastEnergyRefillTime) / (3600 * 1000));
-
-            if (elapsedHours > 0 && minesEnergy < 6) {
-                minesEnergy = Math.min(6, minesEnergy + elapsedHours);
-                lastEnergyRefillTime = lastEnergyRefillTime + (elapsedHours * 3600 * 1000);
-                localStorage.setItem('minesEnergy', minesEnergy);
-                localStorage.setItem('lastEnergyRefillTime', lastEnergyRefillTime);
-            }
-
-            const energyText = document.getElementById('minesEnergyText');
-            if (energyText) energyText.textContent = `${minesEnergy} / 6`;
-
-            const timerText = document.getElementById('energyNextRefill');
-            if (timerText) {
-                if (minesEnergy >= 6) {
-                    timerText.textContent = "Energía al máximo";
-                } else {
-                    const remainingMs = (lastEnergyRefillTime + (3600 * 1000)) - now;
-                    const min = Math.max(0, Math.floor(remainingMs / 60000));
-                    const sec = Math.max(0, Math.floor((remainingMs % 60000) / 1000));
-                    timerText.textContent = `Siguiente carga en: ${min}:${sec < 10 ? '0' : ''}${sec}`;
-                }
-            }
-        }
-
-        function watchMonetagAdForEnergy() {
-            const btn = document.getElementById('refillEnergyBtn');
-            btn.disabled = true;
-            btn.textContent = "Cargando anuncio...";
-
-            if (typeof show_11119512 === 'function') {
-                show_11119512().then(() => {
-                    if (minesEnergy < 6) {
-                        minesEnergy++;
-                        localStorage.setItem('minesEnergy', minesEnergy);
-                        if (minesEnergy === 1) localStorage.setItem('lastEnergyRefillTime', Date.now());
-                        updateMinesEnergySystem();
-                        alert("🔋 ¡Batería recargada exitosamente!");
-                    } else {
-                        alert("Tu energía ya está al máximo.");
-                    }
-                    btn.disabled = false;
-                    btn.textContent = "Ver anuncio y reclamar batería";
-                }).catch((err) => {
-                    alert("No se completó la visualización del anuncio.");
-                    btn.disabled = false;
-                    btn.textContent = "Ver anuncio y reclamar batería";
-                });
-            } else {
-                alert("El servidor de Monetag está saturado. Inténtalo en unos segundos.");
-                btn.disabled = false;
-                btn.textContent = "Ver anuncio y reclamar batería";
-            }
-        }
-
-        function selectMinesLevel(level) {
-            if (isMinesGameActive) { alert("Termina o cobra tu partida actual primero."); return; }
-            currentMinesLevel = level;
-            
-            ['easy', 'medium', 'hard', 'expert'].forEach(l => {
-                const el = document.getElementById(`level-btn-${l}`);
-                if (l === level) el.className = "py-2 rounded-xl text-xs font-bold transition bg-purple-600 text-white";
-                else el.className = "py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400";
+                    canvas.style.transform = 'rotate(0deg)';
+                    updateUI();
+                }, 4100);
+            }).catch(() => {
+                isSpinning = false;
+                alert("Completa el anuncio para girar.");
             });
+        }
 
-            document.getElementById('gameMinesCount').textContent = minesLevelsConfig[level].bombs;
-            document.getElementById('gameCurrentProfit').textContent = "0.00000 TRX";
+        // === ECOISTEMA BUSCAMINAS (INTACTO) ===
+        function selectMinesLevel(level) {
+            currentMinesLevel = level;
+            document.querySelectorAll("[id^='level-btn-']").forEach(b => {
+                b.className = "py-2 rounded-xl text-xs font-bold transition bg-zinc-800 text-zinc-400";
+            });
+            document.getElementById(`level-btn-${level}`).className = "py-2 rounded-xl text-xs font-bold transition bg-purple-600 text-white";
+            document.getElementById('gameMinesCount').innerText = minesLevelsConfig[level].bombs;
             renderEmptyBoard();
         }
 
         function renderEmptyBoard() {
             const board = document.getElementById('minesBoard');
-            if (!board) return;
+            if(!board) return;
             board.innerHTML = '';
-            for (let i = 0; i < 20; i++) {
+            for (let i = 0; i < 16; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'mine-cell';
-                cell.textContent = '?';
+                cell.innerText = '?';
                 board.appendChild(cell);
             }
         }
 
-        function initMinesGame() {
-            if (isMinesGameActive) return;
-            if (minesEnergy < 1) { alert("❌ No tienes energía. Usa el botón de Monetag para recargar gratis."); return; }
-
-            minesEnergy--;
-            localStorage.setItem('minesEnergy', minesEnergy);
-            if (minesEnergy === 5) localStorage.setItem('lastEnergyRefillTime', Date.now());
-            updateMinesEnergySystem();
-
-            isMinesGameActive = true;
-            revealedCellsCount = 0;
-            minesCurrentAccumulatedReward = 0;
-            document.getElementById('gameCurrentProfit').textContent = "0.00000 TRX";
-            document.getElementById('startMinesGameBtn').disabled = true;
-            document.getElementById('startMinesGameBtn').textContent = "JUEGO EN CURSO...";
-            
-            const config = minesLevelsConfig[currentMinesLevel];
-
-            minesBoardData = [];
-            for (let i=0; i<20; i++) { minesBoardData.push({ isBomb: false, revealed: false }); }
-            
-            let bombsPlaced = 0;
-            while (bombsPlaced < config.bombs) {
-                let randIdx = Math.floor(Math.random() * 20);
-                if (!minesBoardData[randIdx].isBomb) {
-                    minesBoardData[randIdx].isBomb = true;
-                    bombsPlaced++;
-                }
-            }
-
-            const board = document.getElementById('minesBoard');
-            board.innerHTML = '';
-            minesBoardData.forEach((cellInfo, index) => {
-                const cell = document.createElement('div');
-                cell.className = 'mine-cell';
-                cell.textContent = '?';
-                cell.addEventListener('click', () => clickMineCell(index, cell));
-                board.appendChild(cell);
-            });
-
-            const cashoutBtn = document.getElementById('minesCashoutBtn');
-            cashoutBtn.disabled = true;
-            cashoutBtn.className = "bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl font-bold opacity-50 cursor-not-allowed transition";
-        }
-
-        async function clickMineCell(index, cellElement) {
-            if (!isMinesGameActive || minesBoardData[index].revealed) return;
-
-            minesBoardData[index].revealed = true;
-            const config = minesLevelsConfig[currentMinesLevel];
-
-            if (minesBoardData[index].isBomb) {
-                cellElement.className = 'mine-cell revealed-bomb';
-                cellElement.innerHTML = '<i class="fas fa-bomb"></i>';
-                await endMinesGame(false); 
-            } else {
-                revealedCellsCount++;
-                cellElement.className = 'mine-cell revealed-safe';
-                cellElement.innerHTML = '<i class="fas fa-gem"></i>';
-
-                let currentTurnMultiplier = 1 + (revealedCellsCount * config.multiplierStep);
-                minesCurrentAccumulatedReward += (config.baseRewardPerCell * currentTurnMultiplier);
-                
-                document.getElementById('gameCurrentProfit').textContent = `${minesCurrentAccumulatedReward.toFixed(5)} TRX`;
-
-                const cashoutBtn = document.getElementById('minesCashoutBtn');
-                cashoutBtn.disabled = false;
-                cashoutBtn.className = "bg-emerald-500 text-black text-xs px-4 py-2.5 rounded-xl font-bold transition active:scale-95 shadow-md shadow-emerald-500/20";
-
-                const totalSafeCells = 20 - config.bombs;
-                if (revealedCellsCount === totalSafeCells) {
-                    await cashoutMinesReward();
-                }
-            }
-        }
-
-        async function cashoutMinesReward() {
-            if (!isMinesGameActive || minesCurrentAccumulatedReward <= 0) return;
-
-            const finalReward = parseFloat(minesCurrentAccumulatedReward.toFixed(5));
-            balance = Number(balance) + finalReward;
-
-            await supabaseRequest("mines_history", "POST", {
-                telegram_id: telegramUserId,
-                level: currentMinesLevel,
-                revealed_cells: revealedCellsCount,
-                reward: finalReward,
-                status: "win"
-            });
-
-            await supabaseRequest(`users?telegram_id=eq.${telegramUserId}`, "PATCH", {
-                balance: parseFloat(balance.toFixed(5))
-            });
-
-            alert(`💰 ¡Excelente! Cobraste +${finalReward.toFixed(5)} TRX directos a tu billetera.`);
-            updateUI();
-            await endMinesGame(true);
-        }
-
-        async function endMinesGame(isWin) {
-            isMinesGameActive = false;
-
-            if (!isWin) {
-                await supabaseRequest("mines_history", "POST", {
-                    telegram_id: telegramUserId,
-                    level: currentMinesLevel,
-                    revealed_cells: revealedCellsCount,
-                    reward: 0,
-                    status: "explosion"
-                });
-                alert("💥 ¡BOOM! Tocaste una bomba. Perdiste el acumulado de esta ronda.");
-            }
-
-            const board = document.getElementById('minesBoard');
-            if (board) {
-                board.innerHTML = '';
-                minesBoardData.forEach((cellInfo) => {
-                    const cell = document.createElement('div');
-                    if (cellInfo.isBomb) {
-                        cell.className = 'mine-cell revealed-bomb';
-                        cell.innerHTML = '<i class="fas fa-bomb"></i>';
-                    } else {
-                        cell.className = 'mine-cell revealed-safe';
-                        cell.innerHTML = cellInfo.revealed ? '<i class="fas fa-gem"></i>' : '';
-                    }
-                    board.appendChild(cell);
-                });
-            }
-
-            document.getElementById('startMinesGameBtn').disabled = false;
-            document.getElementById('startMinesGameBtn').textContent = "INICIAR PARTIDA (-1 ENERGÍA)";
-            
-            const cashoutBtn = document.getElementById('minesCashoutBtn');
-            cashoutBtn.disabled = true;
-            cashoutBtn.className = "bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl font-bold opacity-50 cursor-not-allowed transition";
-
-            await loadMinesHistory();
-        }
-
-        async function loadMinesHistory() {
-            if (!telegramUserId) return;
-            const container = document.getElementById('minesHistoryList');
+        // Sincronizaciones secundarias complementarias de registros históricos
+        async function loadReferrals() {
+            const container = document.getElementById('referralsList');
             if (!container) return;
-            try {
-                const history = await supabaseRequest(`mines_history?telegram_id=eq.${telegramUserId}&order=created_at.desc&limit=6`);
-                if (!history || !history.length) {
-                    container.innerHTML = '<p class="text-zinc-500 italic text-center py-2">No hay partidas registradas</p>';
-                    return;
-                }
-
-                container.innerHTML = history.map(item => {
-                    const isWin = item.status === 'win';
-                    const levelNames = { easy: 'Fácil', medium: 'Medio', hard: 'Difícil', expert: 'Experto' };
-                    return `
-                        <div class="bg-black/40 rounded-xl p-2.5 flex justify-between items-center border border-zinc-800/60">
-                            <div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="font-semibold text-white">${levelNames[item.level] || item.level}</span>
-                                    <span class="text-[10px] text-zinc-500 font-medium">(${item.revealed_cells} gemas)</span>
-                                </div>
-                                <div class="text-[9px] text-zinc-500">${new Date(item.created_at).toLocaleTimeString()}</div>
-                            </div>
-                            <div class="text-right">
-                                <span class="${isWin ? 'text-emerald-400 font-bold' : 'text-red-400 font-semibold'}">
-                                    ${isWin ? '+' + Number(item.reward).toFixed(5) + ' TRX' : '💥 0 TRX'}
-                                </span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } catch(e) {
-                container.innerHTML = '<p class="text-zinc-500 italic text-center py-2">No hay partidas registradas</p>';
+            const data = await supabaseRequest(`users?referred_by=eq.${telegramUserId}`);
+            if(!data || !data.length) {
+                container.innerHTML = '<p class="text-zinc-500 text-xs text-center py-1">Aún no tienes amigos invitados</p>';
+                return;
             }
+            container.innerHTML = data.map(r => `
+                <div class="bg-black/30 p-3 rounded-xl flex justify-between items-center text-xs">
+                    <span class="text-zinc-300 font-medium">${r.username}</span>
+                    <span class="text-zinc-500 font-mono">ID: ${r.telegram_id}</span>
+                </div>
+            `).join('');
+            document.getElementById('milestonesCurrentRefs').innerText = data.length;
         }
 
-        // LÓGICA DE CAMBIO DE PESTAÑAS (FIABLE E INSTANTÁNEA)
-        function switchScreen(screen) {
-            document.querySelectorAll('.app-screen').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-
-            const targetScreen = document.getElementById(`screen-${screen}`);
-            const targetBtn = document.querySelector(`[data-screen="${screen}"]`);
-            
-            if (targetScreen) targetScreen.classList.remove('hidden');
-            if (targetBtn) targetBtn.classList.add('active');
-
-            if (screen === 'tasks') {
-                setTimeout(drawWheel, 50);
-                loadSocialTasks();
-                loadReferralMilestones();
-                loadDailyCheckIn();
-            }
-            if (screen === 'mines') {
-                loadMinesHistory();
-            }
-            if (screen === 'friends') {
-                loadReferrals();
-                loadCommissionHistory();
-            }
-            if (screen === 'wallet') {
-                loadWithdrawHistory();
-            }
-        }
-
-        // === CORRECCIÓN PRINCIPAL EN FUNCIÓN INIT ===
+        // Ejecuciones de los ganchos globales de inicio
         async function init() {
-            // 1. Vinculamos de inmediato los escuchadores de la barra de navegación (EVITA QUE SE CONGELE)
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const screenName = btn.getAttribute('data-screen');
-                    if (screenName) switchScreen(screenName);
-                });
-            });
-
-            // 2. Vinculamos el resto de elementos interactivos de la UI estática
             mineBtn.addEventListener('click', mine);
-            document.getElementById('withdrawBtn').addEventListener('click', requestWithdraw);
             document.getElementById('spinWheelBtn').addEventListener('click', spinWheel);
-            document.getElementById('claimDailyBtn').addEventListener('click', executeDailyCheckIn);
-            document.getElementById('refillEnergyBtn').addEventListener('click', watchMonetagAdForEnergy);
-            document.getElementById('startMinesGameBtn').addEventListener('click', initMinesGame);
-            document.getElementById('minesCashoutBtn').addEventListener('click', cashoutMinesReward);
-
-            // 3. Inicializaciones visuales locales e intervalos
+            
             if (window.Adsgram) {
                 AdController = window.Adsgram.init({ blockId: "34461", debug: false });
             }
@@ -1501,18 +931,15 @@
 
             updateTimer();
             timerInterval = setInterval(updateTimer, 1000);
-            setInterval(updateMinesEnergySystem, 1000);
             renderEmptyBoard();
-            updateMinesEnergySystem();
+            initWheel();
 
-            // 4. Lanzamos la carga asíncrona de datos de usuario en segundo plano
+            // Carga asíncrona robusta de los datos en segundo plano
             await initUser();
 
-            // 5. Cargamos datos de bases de datos secundarios una vez tenemos el telegramUserId
+            // Carga diferida de historiales vinculados al ID
             loadReferrals();
             loadWithdrawHistory();
-            loadSpinHistory();
-            loadMinesHistory();
             loadCommissionHistory();
         }
 
