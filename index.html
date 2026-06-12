@@ -22,8 +22,8 @@
         .balance { font-size: 3rem; font-weight: 700; }
         .timer { font-size: 2.2rem; font-weight: 700; letter-spacing: 2px; }
         .particle { 
-            position: absolute; width: 6px; height: 6px; 
-            background: #00f0ff; border-radius: 50%; \n            pointer-events: none; animation: particleAnim 1.5s forwards; 
+            position: absolute; width: 6px; height: 6px; \n            background: #00f0ff; border-radius: 50%; 
+            pointer-events: none; animation: particleAnim 1.5s forwards; 
         }
         @keyframes particleAnim { 
             0% { transform: scale(1); opacity: 1; } 
@@ -498,15 +498,19 @@
             expert: { bombs: 12, baseRewardPerCell: 0.0040, multiplierStep: 0.50 }
         };
 
-        // ENVIAR PARÁMETROS COMO TEXTO PLANO ESTRUCTURADO (JSON OBJ)
+        // ENVIAR PARÁMETROS FLEXIBLES (Acepta Strings o Números puros si se requiere)
         async function supabaseRPCRequest(functionName, params = {}) {
             try {
                 const fullUrl = `${SUPABASE_BASE_URL}rest/v1/rpc/${functionName}`;
                 
-                // Forzar conversión estricta de cada propiedad a String para evitar conflictos PostgreSQL numéricos/vacíos
-                const structuredTextParams = {};
+                const structuredParams = {};
                 for (const key in params) {
-                    structuredTextParams[key] = String(params[key]);
+                    // Si el valor ya es de tipo numérico o booleano, lo dejamos intacto. Si no, lo pasamos a String.
+                    if (typeof params[key] === 'number' || typeof params[key] === 'boolean') {
+                        structuredParams[key] = params[key];
+                    } else {
+                        structuredParams[key] = String(params[key]);
+                    }
                 }
 
                 const res = await fetch(fullUrl, {
@@ -517,7 +521,7 @@
                         "Content-Type": "application/json",
                         "Prefer": "return=representation"
                     },
-                    body: JSON.stringify(structuredTextParams)
+                    body: JSON.stringify(structuredParams)
                 });
 
                 if (!res.ok) {
@@ -558,7 +562,6 @@
 
             if (referredBy == telegramUserId) referredBy = null;
 
-            // Envío con nombres de clave esperados por tu base de datos
             const rpcResponse = await supabaseRPCRequest("verify_and_sync_telegram_user", {
                 init_data_param: initData,
                 referred_by_param: referredBy ? referredBy : ""
@@ -642,13 +645,15 @@
 
             const executeMiningAction = async () => {
                 mineBtn.disabled = true;
-                mineText.textContent = "PROCESANDO RETORNO SEGURIZADO...";
+                mineText.textContent = "VALIDANDO BLOQUE...";
                 
+                // Conseguimos los datos legítimos de la WebApp de Telegram
                 const initData = window.Telegram?.WebApp?.initData || `user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
 
+                // CORRECCIÓN: Enviamos el reclamo como un flotante puro (número) para que coincida con el tipo PostgreSQL
                 const rpcResponse = await supabaseRPCRequest("execute_secure_mining_claim", {
                     init_data_param: initData,
-                    claim_amount_param: "0.000005"
+                    claim_amount_param: 0.000005
                 });
 
                 if (rpcResponse && rpcResponse.success) {
@@ -659,7 +664,22 @@
                     createParticles(12);
                     updateUI();
                 } else {
-                    alert("⚠️ Error al validar el reclamo del bloque.");
+                    // Si falla el RPC seguro, intentamos una variante de respaldo de compatibilidad directa por si tu backend espera tipo String numérico
+                    const fallbackResponse = await supabaseRPCRequest("execute_secure_mining_claim", {
+                        init_data_param: initData,
+                        claim_amount_param: "0.000005"
+                    });
+
+                    if (fallbackResponse && fallbackResponse.success) {
+                        balance = parseFloat(fallbackResponse.new_balance);
+                        totalMined = parseFloat(fallbackResponse.new_total_mined);
+                        lastMineTime = Date.now();
+                        localStorage.setItem('lastMineTime', lastMineTime);
+                        createParticles(12);
+                        updateUI();
+                    } else {
+                        alert("⚠️ Error al validar el reclamo del bloque.\nVerifica los parámetros o reinicia la app.");
+                    }
                 }
                 updateTimer();
             };
@@ -1153,7 +1173,7 @@
             await supabaseRPCRequest("execute_secure_mines_cashout", {
                 init_data_param: initData,
                 level_param: currentMinesLevel,
-                profit_param: "0"
+                profit_param: 0
             });
             loadMinesHistory();
         }
@@ -1199,7 +1219,7 @@
             // Sincronizar y autenticar usuario
             await initUser();
 
-            // Carga de historiales mapeados por objeto con texto plano
+            // Carga de historiales
             loadReferrals();
             loadWithdrawHistory();
             loadSpinHistory();
