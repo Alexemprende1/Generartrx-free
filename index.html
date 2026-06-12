@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -15,15 +14,15 @@
         body { 
             font-family: 'Inter', sans-serif; 
             background: #0a0a0a; 
-            color: white; 
-        }
+            color: white; \n        }
         .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
         .mining-btn { transition: all 0.3s ease; }
         .mining-btn:active { transform: scale(0.95); }
         .balance { font-size: 3rem; font-weight: 700; }
         .timer { font-size: 2.2rem; font-weight: 700; letter-spacing: 2px; }
         .particle { 
-            position: absolute; width: 6px; height: 6px; \n            background: #00f0ff; border-radius: 50%; 
+            position: absolute; width: 6px; height: 6px; 
+            background: #00f0ff; border-radius: 50%; 
             pointer-events: none; animation: particleAnim 1.5s forwards; 
         }
         @keyframes particleAnim { 
@@ -145,7 +144,10 @@
             animation: shake 0.3s ease;
         }
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }\n            25% { transform: translateX(-4px); }\n            75% { transform: translateX(4px); }\n        }
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-[#0a0a0a] overflow-x-hidden">
@@ -442,7 +444,7 @@
 
         let currentUser = null;
         let telegramUserId = null;
-        let isDevelopmentMock = false; // Indica si estamos simulando fuera de Telegram
+        let isDevelopmentMock = false; 
         const BOT_USERNAME = "generartrx2026bot";
         
         let balance = 0;
@@ -536,27 +538,34 @@
             }
         }
 
-        // Sincronización Inicial del Usuario
+        // Sincronización Inicial del Usuario (CORREGIDA)
         async function initUser() {
             let referredBy = null;
             let initData = "";
 
-            if (window.Telegram?.WebApp && window.Telegram.WebApp.initData) {
-                window.Telegram.WebApp.ready();
-                window.Telegram.WebApp.expand();
+            // Aseguramos que el objeto WebApp de Telegram esté completamente disponible
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tgApp = window.Telegram.WebApp;
+                tgApp.ready();
+                tgApp.expand();
                 
-                initData = window.Telegram.WebApp.initData || "";
-                const user = window.Telegram.WebApp.initDataUnsafe?.user;
-                if (user) telegramUserId = user.id;
+                // Extraer initData crudo para enviarlo al validador de Supabase
+                initData = tgApp.initData || "";
                 
-                const startParam = window.Telegram.WebApp.initDataUnsafe?.start_param;
-                if (startParam && startParam.startsWith("ref_")) {
-                    referredBy = startParam.replace("ref_", "");
+                // Comprobación segura del usuario de Telegram
+                if (tgApp.initDataUnsafe && tgApp.initDataUnsafe.user) {
+                    telegramUserId = tgApp.initDataUnsafe.user.id;
+                    isDevelopmentMock = false;
+                    
+                    const startParam = tgApp.initDataUnsafe.start_param;
+                    if (startParam && startParam.startsWith("ref_")) {
+                        referredBy = startParam.replace("ref_", "");
+                    }
                 }
             }
 
-            // CORRECCIÓN DESARROLLO: Si no estamos dentro de Telegram real, creamos un initData dinámico con timestamp fresco
-            if (!telegramUserId) {
+            // MOCK DE CAÍDA SEGURO: Solo si verificamos al 100% que NO estamos dentro de un cliente Telegram real
+            if (!telegramUserId && !window.Telegram?.WebApp?.initData) {
                 telegramUserId = 5002555137;
                 isDevelopmentMock = true;
                 const currentUnixTimestamp = Math.floor(Date.now() / 1000);
@@ -578,9 +587,12 @@
                     lastMineTime = new Date(currentUser.last_mine_time).getTime();
                 }
             } else {
-                console.warn("⚠️ Utilizando sincronización fallback local para pruebas locales.");
-                balance = 0.05000; // Datos base mock de testeo si falla la sincronización estricta por hash expired
-                totalMined = 0.12000;
+                console.warn("⚠️ Error en sync estricto. Aplicando resguardo local de balance.");
+                // Evitamos pisar el balance si venimos de Telegram real
+                if (isDevelopmentMock) {
+                    balance = 0.05000;
+                    totalMined = 0.12000;
+                }
             }
             updateUI();
         }
@@ -650,10 +662,15 @@
                 mineBtn.disabled = true;
                 mineText.textContent = "VALIDANDO BLOQUE...";
                 
-                let initData = window.Telegram?.WebApp?.initData;
+                let initData = "";
                 
-                // Si estamos en navegador/PC simulando, inyectamos un auth_date en tiempo real para evitar la expiración del Hash window
-                if (!initData || isDevelopmentMock) {
+                // Extraer los datos reales y frescos desde Telegram WebApp en cada clic
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+                    initData = window.Telegram.WebApp.initData;
+                }
+
+                // Solo si de verdad es un test de PC simulado
+                if (isDevelopmentMock || !initData) {
                     const freshTimestamp = Math.floor(Date.now() / 1000);
                     initData = `auth_date=${freshTimestamp}&hash=dev_bypass_hash&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
                 }
@@ -671,9 +688,8 @@
                     createParticles(12);
                     updateUI();
                 } else {
-                    // MOCK DE COMPATIBILIDAD EN ENTORNO DE DESARROLLO LOCAL
                     if (isDevelopmentMock) {
-                        console.log("Simulación de bloque exitosa en modo local (Bypass de hash de seguridad de Telegram)");
+                        console.log("Simulación de bloque exitosa en modo local.");
                         balance += 0.00005;
                         totalMined += 0.00005;
                         lastMineTime = Date.now();
@@ -682,7 +698,7 @@
                         updateUI();
                     } else {
                         const errorMsg = rpcResponse?.message || "La ventana de tiempo expiró.";
-                        alert(`⚠️ Error al validar el reclamo del bloque.\nDetalle: ${errorMsg}\n\nNota: Abre la aplicación directamente desde tu bot de Telegram para verificar la firma de seguridad correctamente.`);
+                        alert(`⚠️ Error al validar el reclamo del bloque.\nDetalle: ${errorMsg}\n\nSi el problema persiste, cierra completamente el bot y vuelve a abrirlo para regenerar tus llaves de sesión.`);
                     }
                 }
                 updateTimer();
@@ -696,6 +712,7 @@
         }
 
         async function loadReferrals() {
+            if (!telegramUserId) return;
             const container = document.getElementById('referralsList');
             if (!container) return;
             container.innerHTML = '<p class="text-zinc-500 text-xs italic">Sincronizando red...</p>';
@@ -716,6 +733,7 @@
         }
 
         async function loadWithdrawHistory() {
+            if (!telegramUserId) return;
             const container = document.getElementById('withdrawHistory');
             if (!container) return;
             container.innerHTML = '<p class="text-zinc-500 text-xs italic">Buscando transacciones...</p>';
@@ -740,6 +758,7 @@
         }
 
         async function loadCommissionHistory() {
+            if (!telegramUserId) return;
             const container = document.getElementById('commissionHistory');
             if (!container) return;
             container.innerHTML = '<p class="text-zinc-500 text-xs italic">Cargando recompensas...</p>';
@@ -761,6 +780,7 @@
         }
 
         async function loadSpinHistory() {
+            if (!telegramUserId) return;
             const container = document.getElementById('spinHistoryList');
             if (!container) return;
 
@@ -775,6 +795,7 @@
         }
 
         async function loadMinesHistory() {
+            if (!telegramUserId) return;
             const container = document.getElementById('minesHistoryList');
             if (!container) return;
 
@@ -823,7 +844,7 @@
             if (!addr) { alert("Ingresa una dirección o correo válido."); return; }
             if (balance < currentMinWithdraw) { alert(`Balance insuficiente. El mínimo es ${currentMinWithdraw} TRX.`); return; }
 
-            let initData = window.Telegram?.WebApp?.initData;
+            let initData = window.Telegram?.WebApp?.initData || "";
             if(!initData) {
                 initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
             }
@@ -846,7 +867,7 @@
         }
 
         async function executeDailyCheckIn() {
-            let initData = window.Telegram?.WebApp?.initData;
+            let initData = window.Telegram?.WebApp?.initData || "";
             if(!initData) {
                 initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
             }
@@ -881,7 +902,7 @@
 
         async function claimSocialTask(taskId, taskReward, taskUrl) {
             window.open(taskUrl, '_blank');
-            let initData = window.Telegram?.WebApp?.initData;
+            let initData = window.Telegram?.WebApp?.initData || "";
             if(!initData) {
                 initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
             }
@@ -921,7 +942,7 @@
         }
 
         async function claimMilestone(mId, mReward) {
-            let initData = window.Telegram?.WebApp?.initData;
+            let initData = window.Telegram?.WebApp?.initData || "";
             if(!initData) {
                 initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
             }
@@ -982,7 +1003,7 @@
                     const finalReward = wheelRewards[randomAngleIndex];
                     canvas.style.transform = `rotate(0deg)`;
 
-                    let initData = window.Telegram?.WebApp?.initData;
+                    let initData = window.Telegram?.WebApp?.initData || "";
                     if(!initData) {
                         initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
                     }
@@ -1153,7 +1174,7 @@
             const prize = minesCurrentAccumulatedReward;
             endMinesGame(true);
 
-            let initData = window.Telegram?.WebApp?.initData;
+            let initData = window.Telegram?.WebApp?.initData || "";
             if(!initData) {
                 initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
             }
@@ -1203,7 +1224,7 @@
         }
 
         async function saveLostMinesMatch() {
-            let initData = window.Telegram?.WebApp?.initData;
+            let initData = window.Telegram?.WebApp?.initData || "";
             if(!initData) {
                 initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
             }
@@ -1253,15 +1274,17 @@
             renderSocialTasks();
             updateMinesEnergySystem();
 
-            // Sincronizar y autenticar usuario
+            // Sincronizar y autenticar usuario de forma limpia
             await initUser();
 
-            // Carga de historiales
-            loadReferrals();
-            loadWithdrawHistory();
-            loadSpinHistory();
-            loadMinesHistory();
-            loadCommissionHistory();
+            // Carga de historiales si hay un usuario válido
+            if (telegramUserId) {
+                loadReferrals();
+                loadWithdrawHistory();
+                loadSpinHistory();
+                loadMinesHistory();
+                loadCommissionHistory();
+            }
         }
 
         window.onload = init;
