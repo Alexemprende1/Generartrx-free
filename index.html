@@ -14,7 +14,8 @@
         body { 
             font-family: 'Inter', sans-serif; 
             background: #0a0a0a; 
-            color: white; \n        }
+            color: white; 
+        }
         .tron-glow { text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff; }
         .mining-btn { transition: all 0.3s ease; }
         .mining-btn:active { transform: scale(0.95); }
@@ -445,6 +446,7 @@
         let currentUser = null;
         let telegramUserId = null;
         let isDevelopmentMock = false; 
+        let telegramRawInitData = ""; // <--- AQUÍ SE GUARDA LA FIRMA ORIGINAL SIN CAMBIOS
         const BOT_USERNAME = "generartrx2026bot";
         
         let balance = 0;
@@ -501,11 +503,9 @@
             expert: { bombs: 12, baseRewardPerCell: 0.0040, multiplierStep: 0.50 }
         };
 
-        // ENVIAR PARÁMETROS FLEXIBLES (Acepta Strings o Números puros si se requiere)
         async function supabaseRPCRequest(functionName, params = {}) {
             try {
                 const fullUrl = `${SUPABASE_BASE_URL}rest/v1/rpc/${functionName}`;
-                
                 const structuredParams = {};
                 for (const key in params) {
                     if (typeof params[key] === 'number' || typeof params[key] === 'boolean') {
@@ -538,21 +538,18 @@
             }
         }
 
-        // Sincronización Inicial del Usuario (CORREGIDA)
+        // Sincronización e Inmutabilidad de Firma
         async function initUser() {
             let referredBy = null;
-            let initData = "";
 
-            // Aseguramos que el objeto WebApp de Telegram esté completamente disponible
             if (window.Telegram && window.Telegram.WebApp) {
                 const tgApp = window.Telegram.WebApp;
                 tgApp.ready();
                 tgApp.expand();
                 
-                // Extraer initData crudo para enviarlo al validador de Supabase
-                initData = tgApp.initData || "";
+                // Captura inalterable del initData nativo
+                telegramRawInitData = tgApp.initData || "";
                 
-                // Comprobación segura del usuario de Telegram
                 if (tgApp.initDataUnsafe && tgApp.initDataUnsafe.user) {
                     telegramUserId = tgApp.initDataUnsafe.user.id;
                     isDevelopmentMock = false;
@@ -564,18 +561,18 @@
                 }
             }
 
-            // MOCK DE CAÍDA SEGURO: Solo si verificamos al 100% que NO estamos dentro de un cliente Telegram real
-            if (!telegramUserId && !window.Telegram?.WebApp?.initData) {
+            // Modo simulación local seguro (Evita corromper variables en producción)
+            if (!telegramUserId && !telegramRawInitData) {
                 telegramUserId = 5002555137;
                 isDevelopmentMock = true;
                 const currentUnixTimestamp = Math.floor(Date.now() / 1000);
-                initData = `auth_date=${currentUnixTimestamp}&hash=dev_mock_hash_bypass_validation&user=${encodeURIComponent(JSON.stringify({id: telegramUserId, username: "dev_user"}))}`;
+                telegramRawInitData = `auth_date=${currentUnixTimestamp}&hash=dev_mock_hash_bypass_validation&user=${encodeURIComponent(JSON.stringify({id: telegramUserId, username: "dev_user"}))}`;
             }
 
             if (referredBy == telegramUserId) referredBy = null;
 
             const rpcResponse = await supabaseRPCRequest("verify_and_sync_telegram_user", {
-                init_data_param: initData,
+                init_data_param: telegramRawInitData,
                 referred_by_param: referredBy ? referredBy : ""
             });
 
@@ -587,8 +584,7 @@
                     lastMineTime = new Date(currentUser.last_mine_time).getTime();
                 }
             } else {
-                console.warn("⚠️ Error en sync estricto. Aplicando resguardo local de balance.");
-                // Evitamos pisar el balance si venimos de Telegram real
+                console.warn("⚠️ Sincronización usando resguardo local.");
                 if (isDevelopmentMock) {
                     balance = 0.05000;
                     totalMined = 0.12000;
@@ -661,22 +657,10 @@
             const executeMiningAction = async () => {
                 mineBtn.disabled = true;
                 mineText.textContent = "VALIDANDO BLOQUE...";
-                
-                let initData = "";
-                
-                // Extraer los datos reales y frescos desde Telegram WebApp en cada clic
-                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
-                    initData = window.Telegram.WebApp.initData;
-                }
 
-                // Solo si de verdad es un test de PC simulado
-                if (isDevelopmentMock || !initData) {
-                    const freshTimestamp = Math.floor(Date.now() / 1000);
-                    initData = `auth_date=${freshTimestamp}&hash=dev_bypass_hash&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-                }
-
+                // Enviamos limpiamente la cadena original inalterada recopilada en la carga inicial
                 const rpcResponse = await supabaseRPCRequest("execute_secure_mining_claim", {
-                    init_data_param: initData,
+                    init_data_param: telegramRawInitData,
                     claim_amount_param: 0.000005
                 });
 
@@ -689,7 +673,6 @@
                     updateUI();
                 } else {
                     if (isDevelopmentMock) {
-                        console.log("Simulación de bloque exitosa en modo local.");
                         balance += 0.00005;
                         totalMined += 0.00005;
                         lastMineTime = Date.now();
@@ -697,8 +680,8 @@
                         createParticles(12);
                         updateUI();
                     } else {
-                        const errorMsg = rpcResponse?.message || "La ventana de tiempo expiró.";
-                        alert(`⚠️ Error al validar el reclamo del bloque.\nDetalle: ${errorMsg}\n\nSi el problema persiste, cierra completamente el bot y vuelve a abrirlo para regenerar tus llaves de sesión.`);
+                        const errorMsg = rpcResponse?.message || "Error en la verificación de seguridad.";
+                        alert(`⚠️ Error al validar la firma:\nDetalle: ${errorMsg}\n\nPor seguridad, sal un momento del bot, borra el chat y vuelve a presionar 'Iniciar app' para limpiar los tokens corruptos.`);
                     }
                 }
                 updateTimer();
@@ -844,13 +827,8 @@
             if (!addr) { alert("Ingresa una dirección o correo válido."); return; }
             if (balance < currentMinWithdraw) { alert(`Balance insuficiente. El mínimo es ${currentMinWithdraw} TRX.`); return; }
 
-            let initData = window.Telegram?.WebApp?.initData || "";
-            if(!initData) {
-                initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-            }
-            
             const rpcResponse = await supabaseRPCRequest("execute_secure_withdrawal", {
-                init_data_param: initData,
+                init_data_param: telegramRawInitData,
                 address_param: addr,
                 method_param: metodoRetiroSeleccionado,
                 amount_param: balance
@@ -867,12 +845,7 @@
         }
 
         async function executeDailyCheckIn() {
-            let initData = window.Telegram?.WebApp?.initData || "";
-            if(!initData) {
-                initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-            }
-            
-            const rpcResponse = await supabaseRPCRequest("execute_secure_daily_checkin", { init_data_param: initData });
+            const rpcResponse = await supabaseRPCRequest("execute_secure_daily_checkin", { init_data_param: telegramRawInitData });
 
             if (rpcResponse && rpcResponse.success) {
                 balance = parseFloat(rpcResponse.new_balance);
@@ -902,13 +875,8 @@
 
         async function claimSocialTask(taskId, taskReward, taskUrl) {
             window.open(taskUrl, '_blank');
-            let initData = window.Telegram?.WebApp?.initData || "";
-            if(!initData) {
-                initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-            }
-            
             const rpcResponse = await supabaseRPCRequest("execute_secure_social_task", {
-                init_data_param: initData,
+                init_data_param: telegramRawInitData,
                 task_id_param: taskId,
                 task_reward_param: taskReward
             });
@@ -942,12 +910,8 @@
         }
 
         async function claimMilestone(mId, mReward) {
-            let initData = window.Telegram?.WebApp?.initData || "";
-            if(!initData) {
-                initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-            }
             const rpcResponse = await supabaseRPCRequest("execute_secure_milestone_claim", {
-                init_data_param: initData,
+                init_data_param: telegramRawInitData,
                 milestone_id_param: mId,
                 milestone_reward_param: mReward
             });
@@ -1002,14 +966,9 @@
                     isSpinning = false;
                     const finalReward = wheelRewards[randomAngleIndex];
                     canvas.style.transform = `rotate(0deg)`;
-
-                    let initData = window.Telegram?.WebApp?.initData || "";
-                    if(!initData) {
-                        initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-                    }
                     
                     const rpcResponse = await supabaseRPCRequest("execute_secure_wheel_spin", {
-                        init_data_param: initData,
+                        init_data_param: telegramRawInitData,
                         reward_param: finalReward
                     });
 
@@ -1173,14 +1132,9 @@
             if (!isMinesGameActive || revealedCellsCount === 0) return;
             const prize = minesCurrentAccumulatedReward;
             endMinesGame(true);
-
-            let initData = window.Telegram?.WebApp?.initData || "";
-            if(!initData) {
-                initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-            }
             
             const rpcResponse = await supabaseRPCRequest("execute_secure_mines_cashout", {
-                init_data_param: initData,
+                init_data_param: telegramRawInitData,
                 level_param: currentMinesLevel,
                 profit_param: prize
             });
@@ -1224,12 +1178,8 @@
         }
 
         async function saveLostMinesMatch() {
-            let initData = window.Telegram?.WebApp?.initData || "";
-            if(!initData) {
-                initData = `auth_date=${Math.floor(Date.now()/1000)}&user=${encodeURIComponent(JSON.stringify({id: telegramUserId}))}`;
-            }
             await supabaseRPCRequest("execute_secure_mines_cashout", {
-                init_data_param: initData,
+                init_data_param: telegramRawInitData,
                 level_param: currentMinesLevel,
                 profit_param: 0
             });
@@ -1274,10 +1224,10 @@
             renderSocialTasks();
             updateMinesEnergySystem();
 
-            // Sincronizar y autenticar usuario de forma limpia
+            // Sincronizar y autenticar usuario
             await initUser();
 
-            // Carga de historiales si hay un usuario válido
+            // Carga segura de historiales si hay sesión válida
             if (telegramUserId) {
                 loadReferrals();
                 loadWithdrawHistory();
